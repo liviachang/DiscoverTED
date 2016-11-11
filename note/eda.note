@@ -1,0 +1,46 @@
+
+
+-- apr, 2012
+Talks: 1149
+Speakers: 961
+Users: 69023
+Active Users: 10962
+Tags: 300
+Themes: 48
+Transcripts: 1102
+Related Videos: 3002
+Favorites: 108476
+Comments: 201934
+--
+
+-- sep, 2012
+Talks: 1203
+Speakers: 1006
+Users: 74760
+Active Users: 12605
+Tags: 298
+Themes: 46
+Transcripts: 1203
+Related Videos: 3090
+Favorites: 134533
+Comments: 209566
+--
+
+m users, n talks, k latent features
+create rating_df = (user_id, fav_talk_id) data
+run matrix factorization based on rating_df, U x V
+for each user "ui", rank k latent features
+define peers "pi" for the user "ui" as users with same top 2 latent features
+calculate average rank for each k-2 latent features
+define potential learning topic "Li" as the latent features with highest average rankings
+define potential interested talks "ti" as top 10 talks for latent feature "Li" from V
+calculate the rating distance between favorite talks and the potential interested talks
+find the recommended talk "ri" with smallest distance
+
+ui: user i
+pi: peers for user i
+Li: potential most interested learning topic
+ti: potential most interested talks of Li
+ri: recommended talk for user i
+
+

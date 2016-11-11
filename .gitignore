@@ -2,7 +2,7 @@
 *.bak
 *.swp
 *.proposal
-*.note
 *.html
 *.csv
+data/*.csv
 final.proposal.md

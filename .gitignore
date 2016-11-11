@@ -4,7 +4,6 @@
 *.proposal
 *.html
 *.csv
-data
-data/
-data/*.csv
+data*
+data/*
 final.proposal.md

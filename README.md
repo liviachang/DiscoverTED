@@ -12,8 +12,8 @@ will potentially like.
 ## Proposed Process Flow
 - EDA
 - Matrix Factorization to find peers for a given user
-- Analyze peers' latent features to find one *potential new topic* a user may like mostly
-- Analyze the *potential new topic* to find *potential talks* to recommend
+- Analyze peers' latent features to find one ***potential new topic*** a user may like mostly
+- Analyze the potential new topic to find ***potential talks*** to recommend
 - The final recommended talk is the talk with the ratings (say, x% informative + 
   y% Funny + z% Inspiring) most similar to those of a user's favorites talk. 
 

@@ -1,2 +1,4 @@
 python src/scrape_ted_talks.py
+python src/clean_data.py
+
 

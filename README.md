@@ -3,7 +3,6 @@
 This capstone project is to build a TED talk recommender for people to learn
 new topics.
 
-## Motivation
 While I am trying to be an expert in data science, I would also like to keep an
 eye on the world. Learning some new topics stimulate my thoughts and adds
 diversity to my life! TED.com is one of my favorite resources to learn. Thus, I

@@ -21,9 +21,8 @@ will potentially like.
 ## Data
 The data is mainly sourced from [Idiap TED dataset](https://www.idiap.ch/dataset/ted) 
 and [ted.com](https://ted.com). 
-- Idiap's dataset includes both user and talk data. It was scraped as of Sep 2012.
-It does not include rating data of talks.
-- Rating data was scraped from ted.com as of Nov 2016.
+- Idiap: Scraped as of Sep 2012. Includes data of both users and talks (except ratings).
+- Rating: Scraped as of Nov 2016 from ted.com
 
 ## Acknowledge
 - Nikolaos Pappas, Andrei Popescu-Belis, "Combining Content with User

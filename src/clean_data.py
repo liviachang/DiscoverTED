@@ -60,6 +60,8 @@ def flatten_user_favorites(x): ## x = udf.favorites[0]
   ## from (user, [n titles]) to a list with n tuples
   ## each tuple is (user_id, favorite_title)
   favs = [f for f in x['favorites']]
+  #print favs; print len(favs)
+  favs = set(favs)
   uids = [x['user_id']] * len(favs)
   user_fav_pairs = zip(uids, favs)
   return user_fav_pairs
@@ -99,6 +101,7 @@ def transform_user_data():
   ## each row for each "user/favorite title" combination
   tcols = ['title_idiap', 'tid']
   rdf = pd.merge(udf, tdf[tcols], how='left', left_on='fav_title', right_on='title_idiap')
+  rdf = rdf.drop_duplicates(rdf)
 
   ## print basic stats to check the merge quality
   print rdf.info()
@@ -112,6 +115,29 @@ def transform_user_data():
   rdf.to_csv('/Users/liviachang/Galvanize/capstone/data/users_info_transformed.csv', index=False)
   return rdf
 
+def get_rating_matrix():
+  print 'Save transformed user data into rating matrix'
+  rfn = '/Users/liviachang/Galvanize/capstone/data/users_info_transformed.csv'
+  rdf = pd.read_csv(rfn)
+  rdf['tid'] = rdf['tid'].astype(int)
+  rdf['rating'] = 1
+
+  rmat = rdf.pivot(index='uid_idiap', columns='tid', values='rating').fillna(0)
+  rmat.to_csv('/Users/liviachang/Galvanize/capstone/data/rating_matrix.csv')
+  
+  N_UIDS = 1000
+  uids_all = rdf['uid_idiap'].unique()
+  uids_small = np.random.choice(uids_all, size=N_UIDS)
+  rdf_small = rdf[rdf['uid_idiap'].isin(uids_small)]
+  rmat_small = rdf_small.pivot(index='uid_idiap', columns='tid', values='rating').fillna(0)
+  rmat_small.to_csv('/Users/liviachang/Galvanize/capstone/data/rating_matrix_small.csv')
+  
+  print 'rmat.shape={}, rmat_small.shape={}'.format(rmat.shape, rmat_small.shape)
+
+
 if __name__ == '__main__':
-  tdf = merge_talk_data()
-  rdf = transform_user_data()
+  #tdf = merge_talk_data()
+  #rdf = transform_user_data()
+  get_rating_matrix()
+
+

@@ -4,6 +4,7 @@
 *.proposal
 *.html
 *.csv
+*.pkl
 data*
 data/*
 final.proposal.md

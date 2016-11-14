@@ -7,15 +7,17 @@ from matplotlib import pyplot as plt
 from scipy.stats import rankdata
 from functools import partial as ftPartial
 from collections import Counter
+from time import time
+from datetime import datetime
 #import graphlab as gl
 #from mf import matrix_factorization
 
-def load_rating_data(IS_RUN_SMALL=True):
-  print 'Loading the rating data'
-  if IS_RUN_SMALL:
-    R_fn = '/Users/liviachang/Galvanize/capstone/data/rating_matrix_small.csv'
-  else:
+def load_rating_data(IS_RUN_ALL):
+  print '\nLoading the rating data'
+  if IS_RUN_ALL:
     R_fn = '/Users/liviachang/Galvanize/capstone/data/rating_matrix.csv'
+  else:
+    R_fn = '/Users/liviachang/Galvanize/capstone/data/rating_matrix_small.csv'
 
   ## load the data
   R = pd.read_csv(R_fn)
@@ -24,35 +26,39 @@ def load_rating_data(IS_RUN_SMALL=True):
   print 'R.shape={}'.format(R.shape)
   return R
 
-def build_nmf(R, k, IS_RUN_SMALL):
-  print 'Building NMF models and Finding k latent features'
+def build_nmf(R, k, IS_RUN_ALL):
+  print '\nBuilding NMF models and Finding k latent features'
 
   nmf = NMF(n_components = k)
-  nmf.fit(R)
+  nmf.fit(R.values)
 
-  U = nmf.transform(R)
+  U = nmf.transform(R.values)
   V = nmf.components_
   E = nmf.reconstruction_err_
+  
+  U = pd.DataFrame(U, index=R.index)
+  V = pd.DataFrame(V, columns=R.columns)
 
   print 'R.shape={}, U.shape={}, V.shape={}, nmf_err={:.4f}'.format(\
     R.shape, U.shape, V.shape, E)
   
   ## save the model (i.e. U and V matrix)
-  if IS_RUN_SMALL:
-    model_fn = '/Users/liviachang/Galvanize/capstone/model/modelUV{}_small.pkl'.format(k)
-  else:
+  if IS_RUN_ALL:
     model_fn = '/Users/liviachang/Galvanize/capstone/model/modelUV{}.pkl'.format(k)
+  else:
+    model_fn = '/Users/liviachang/Galvanize/capstone/model/modelUV{}_small.pkl'.format(k)
   with open(model_fn, 'wb') as f:
     pickle.dump( (U,V), f)
 
   return U, V, E
 
 
-def load_modelUV(k, IS_RUN_SMALL):
-  if IS_RUN_SMALL:
-    model_fn = '/Users/liviachang/Galvanize/capstone/model/modelUV{}_small.pkl'.format(k)
-  else:
+def load_nmf(k, IS_RUN_ALL):
+  print '\nLoading NMF models and Finding k latent features'
+  if IS_RUN_ALL:
     model_fn = '/Users/liviachang/Galvanize/capstone/model/modelUV{}.pkl'.format(k)
+  else:
+    model_fn = '/Users/liviachang/Galvanize/capstone/model/modelUV{}_small.pkl'.format(k)
 
   with open(model_fn) as f:
     U, V = pickle.load(f)
@@ -71,6 +77,7 @@ def get_top_lf(x, N_LFS_PER_PEERGROUP):
   return str(top_lfs)
 
 def find_peers(U, N_LFS_PER_PEERGROUP=2):
+  print '\nFinding peers based on latent features'
   ## get the rankings of the latent featues for each user based on U matrix
   U_ranks = U.apply(get_latent_feature_rankings, axis=1) # shape=(n_users, k)
 
@@ -90,11 +97,9 @@ def find_peers(U, N_LFS_PER_PEERGROUP=2):
   psize = [len(v) for k,v in peers.iteritems()]
   print '# grps={}, # users={}, min/max grp size={}, {}'.format( \
     len(peers), sum(psize), min(psize), max(psize) )
-  print 'most common size of groups:\n{}'.format(Counter(psize).most_common())
+  #print 'most common size of groups:\n{}'.format(Counter(psize).most_common())
 
   return grps, peers, U_ranks
-
-#def get_rec_topic_per_user(user_idx, U_ranks, grps, peers):
 
 def get_rec_topic_per_user(cur_user, U_ranks, grps, peers):
   cur_grp = grps[cur_user]
@@ -121,6 +126,7 @@ def get_rec_topic_per_user(cur_user, U_ranks, grps, peers):
 
 
 def get_rec_topic(U_ranks, grps, peers):
+  print '\nFinding one candidate topic based on peers'
   users = pd.Series( U_ranks.index )
   rec_topics = users.apply( 
     ftPartial(get_rec_topic_per_user, U_ranks=U_ranks, grps=grps, peers=peers))
@@ -137,6 +143,7 @@ def get_top_talks_per_topic(f_vals, n_top):
 
 
 def get_talks_candidates(V, N_TALKS_PER_LF=5):
+  print '\nFinding talk candidates based on the candidate topic'
   tmpf = ftPartial(get_top_talks_per_topic, n_top=N_TALKS_PER_LF)
   top_talks_idx = V.apply(tmpf, axis=1)
   top_talk_ids = V.columns[ top_talks_idx.values ]
@@ -174,7 +181,7 @@ def get_rating_MSE(talk_rating, fav_ratings):
   return mean_dist
 
 def get_rec_talk(rec_topics, talk_candidates, tdf, rdf):
-  #uids = pd.Series( np.random.choice(rec_topics.index, size=5) )
+  print '\nPicking one recommended talk based on the talk candidates and ratings'
   uids = pd.Series(rec_topics.index)
   tmpf = ftPartial(get_rec_talk_per_user, rdf=rdf, tdf=tdf,
     rec_topics=rec_topics, talk_candidates=talk_candidates)
@@ -182,29 +189,46 @@ def get_rec_talk(rec_topics, talk_candidates, tdf, rdf):
   rec_tids.index = uids
 
   return rec_tids
+
+def print_time(msg, t1=None):
+  t2 = time()
+
+  t2_str = datetime.fromtimestamp(t2).strftime('%Y/%m/%d %H:%M:%S')
+  if t1 is None:
+    print '{}: {}'.format(t2_str, msg)
+  else:
+    print '{}: {} {:.0f} secs'.format(t2_str, msg, t2-t1)
+  return t2
+
   
 
 if __name__ == '__main__':
-#if False:
 
-  IS_RUN_SMALL = False
-  R = load_rating_data(IS_RUN_SMALL)
+  t1 = print_time('Program start')
 
-  N_TOPCIS = 10
-  IS_BUILD_NMF = False
+  IS_RUN_ALL = True
+  R = load_rating_data(IS_RUN_ALL)
+
+  N_TOPICS = 10
+  IS_BUILD_NMF = True
   if IS_BUILD_NMF:
-    U, V, E = build_nmf(R.values, N_TOPCIS, IS_RUN_SMALL)
+    U, V, E = build_nmf(R, N_TOPICS, IS_RUN_ALL)
   else:
-    U, V = load_modelUV(N_TOPCIS, IS_RUN_SMALL)
+    U, V = load_nmf(N_TOPICS, IS_RUN_ALL)
 
-  U = pd.DataFrame(U, index=R.index)
-  V = pd.DataFrame(V, columns=R.columns)
+  t2 = print_time('Time to run NMF', t1)
 
   lf_grps, peers, U_ranks = find_peers(U, N_LFS_PER_PEERGROUP=2)
 
+  t3 = print_time('Time to find peers', t2)
+
   rec_topics = get_rec_topic(U_ranks, lf_grps, peers) ## shape=(n_users,)
+  
+  t4 = print_time('Time to find topic from peers', t3)
 
   talk_candidates = get_talks_candidates(V, N_TALKS_PER_LF=5) ## shape=(k, N_TALKS_PER_LF)
+  
+  t5 = print_time('Time to find talks from topic', t4)
   
   tfn = '/Users/liviachang/Galvanize/capstone/data/talks_info_merged.csv'
   tdf = pd.read_csv(tfn)
@@ -216,6 +240,8 @@ if __name__ == '__main__':
   rec_talks = rec_tids.to_frame(name='tid').reset_index()
   rec_talks = pd.merge( rec_talks, tdf[info_cols], how='left', on='tid')
   rec_talks = rec_talks.set_index('uid_idiap')
+  
+  t6 = print_time('Time to pick one talk from candidates', t5)
 
 
 

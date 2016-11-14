@@ -1,3 +1,25 @@
+--- output from src/build_model.py
+Loading the rating data
+R.shape=(12401, 1201)
+Building NMF models and Finding k latent features
+R.shape=(12401, 1201), U.shape=(12401, 10), V.shape=(10, 1201),
+nmf_err=330.4279
+Time to run NMF: 17.309 secs
+# grps=55, # users=12401, min/max grp size=31, 786
+most common size of groups:
+[(201, 2), (166, 2), (68, 2), (128, 1), (132, 1), (142, 1), (786, 1), (147, 1),
+(149, 1), (540, 1), (157, 1), (287, 1), (160, 1), (197, 1), (420, 1), (40, 1),
+(308, 1), (181, 1), (182, 1), (73, 1), (185, 1), (59, 1), (60, 1), (64, 1),
+(246, 1), (455, 1), (72, 1), (457, 1), (55, 1), (204, 1), (78, 1), (82, 1),
+(339, 1), (341, 1), (292, 1), (474, 1), (603, 1), (221, 1), (95, 1), (224, 1),
+(571, 1), (229, 1), (105, 1), (365, 1), (31, 1), (368, 1), (241, 1), (117, 1),
+(118, 1), (248, 1), (249, 1), (254, 1)]
+Time to find peers: 5.054 secs
+Time to find topic from peers: 34.923 secs
+Time to find talks from topic: 0.008 secs
+Time to pick one talk from candidates: 194.208 secs
+
+
 
 --- output from src/clean_data.py
 Merging talk data from idiap and my scraping results

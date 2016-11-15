@@ -1,0 +1,6 @@
+TOPIC_TALKS_FN = '/Users/liviachang/Galvanize/capstone/model/topic_talks.pkl'
+MODEL_FN = '/Users/liviachang/Galvanize/capstone/model/UV_matrix.pkl'
+GROUP_RTOPICS_FN = '/Users/liviachang/Galvanize/capstone/model/group_rtopics.pkl'
+TALK_INFO_FN = '/Users/liviachang/Galvanize/capstone/data/talks_info_merged.csv'
+USER_TALK_FN = '/Users/liviachang/Galvanize/capstone/data/users_info_transformed.csv'
+RATING_MATRIX_FN = '/Users/liviachang/Galvanize/capstone/data/rating_matrix.csv'

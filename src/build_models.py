@@ -1,43 +1,24 @@
 from __future__ import division
+from src.configs import *
 import pandas as pd
 import numpy as np
 from sklearn.decomposition import NMF
 import cPickle as pickle
-from matplotlib import pyplot as plt
 from scipy.stats import rankdata
 from functools import partial as ftPartial
-from collections import Counter
 from time import time
 from datetime import datetime
 import os
 
-def load_rating_data(rating_fn):
-  t1 = print_time('Loading the rating data')
+def build_nmf(k, R=None, IS_LOAD_UV=False):
 
-  ## load the data
-  R = pd.read_csv(rating_fn)
-  R = R.set_index('uid_idiap')
-
-  t2 = print_time('Loading the rating data', t1)
-  print 'R.shape={}\n'.format(R.shape)
-
-  return R
-
-def build_nmf(rating_fn, k, IS_LOAD_UV=False):
-  ## get model filename
-  model_fn = rating_fn.replace('/data/rating_matrix', '/model/UV_matrix')
-
-  if IS_LOAD_UV and os.path.isfile(model_fn):
+  if IS_LOAD_UV and os.path.isfile(MODEL_FN):
     t1 = print_time('Loading NMF models with k={}'.format(k))
-    with open(model_fn) as f:
+    with open(MODEL_FN) as f:
       U, V = pickle.load(f)
   else:
     t1 = print_time('Building NMF models with k={}'.format(k))
   
-    ## load user_talk rating matrix
-    ## R.shape = n_users x m_talks
-    R = load_rating_data(rating_fn)
-
     ## get NMF R = U x V
     ## U.shape = n_users x k_topics
     ## V.shape = k_topics x m_talks
@@ -48,7 +29,7 @@ def build_nmf(rating_fn, k, IS_LOAD_UV=False):
     E = nmf.reconstruction_err_
     
     ## save the model (i.e. U and V matrix)
-    with open(model_fn, 'wb') as f:
+    with open(MODEL_FN, 'wb') as f:
       pickle.dump( (U,V), f)
 
   t2 = print_time('Building NMF models with k={}'.format(k), t1)
@@ -138,6 +119,9 @@ def get_group_rtopics(G_users, U_ranks, N_REC_TOPICS):
   t2 = print_time('Getting groups\' {} recommended topics'.format(N_REC_TOPICS), t1)
   print '# grps={}, # rec topics={}\n'.format(len(G_rtopics), N_REC_TOPICS)
 
+  with open(GROUP_RTOPICS_FN, 'wb') as f:
+    pickle.dump( G_rtopics, f )
+
   return G_rtopics
 
 def get_user_rtopics(U_gtopics, G_rtopics):
@@ -190,6 +174,9 @@ def get_topic_talks(V, N_TALK_CANDIDATES=5):
   tmpf = ftPartial(get_topic_talks_per_topic, n_top=N_TALK_CANDIDATES)
   top_talks_idx = V.apply(tmpf, axis=1)
   top_talk_ids = V.columns[ top_talks_idx.values ]
+
+  with open(TOPIC_TALKS_FN, 'wb') as f:
+    pickle.dump(top_talk_ids, f)
   
   t2 = print_time('Getting topics\' top {} talks'.format(N_TALK_CANDIDATES), t1)
 
@@ -256,45 +243,66 @@ def print_time(msg, t1=None):
     print '{}: {} <== {:.0f} secs'.format(t2_str, msg, t2-t1)
   return t2
 
+def load_talk_ratings(fn):
+  rating_cols = ['Beautiful', 'Confusing', 'Courageous', 'Fascinating', \
+    'Funny','Informative', 'Ingenious', 'Inspiring', 'Jaw-dropping', \
+    'Longwinded', 'OK', 'Obnoxious', 'Persuasive', 'Unconvincing']
+
+  TK_ratings = pd.read_csv(fn)
+  TK_ratings.tid = TK_ratings.tid.astype(str)
+  TK_ratings = TK_ratings.set_index('tid')
+  TK_ratings = TK_ratings.ix[:,rating_cols]
+  return TK_ratings
+
+def load_talk_info(fn):
+  info_cols = ['speaker', 'title', 'ted_event', 'keywords', 'related_themes']
+  
+  TK_info = pd.read_csv(fn)
+  TK_info.tid = TK_info.tid.astype(str)
+  TK_info = TK_info.set_index('tid')
+  TK_info = TK_info.ix[:, info_cols]
+  return TK_info
+
+def load_user_fav_talks(fn):
+  user_ftalk_df_orig = pd.read_csv(fn)
+  user_ftalk_df = user_ftalk_df_orig.copy()
+  user_ftalk_df.tid = user_ftalk_df.tid.astype(int).astype(str)
+  return user_ftalk_df
+
+def load_rating_data(fn):
+  t1 = print_time('Loading the rating data')
+
+  ## load the data
+  R = pd.read_csv(fn)
+  R = R.set_index('uid_idiap')
+
+  t2 = print_time('Loading the rating data', t1)
+  print 'R.shape={}\n'.format(R.shape)
+
+  return R
+
+def load_data():
+  TK_ratings = load_talk_ratings(TALK_INFO_FN)
+  TK_info = load_talk_info(TALK_INFO_FN)
+  U_ftalks = load_user_fav_talks(USER_TALK_FN)
+  R_mat = load_rating_data(RATING_MATRIX_FN)
+
+  return TK_ratings, TK_info, U_ftalks, R_mat
+
 if __name__ == '__main__':
   N_TOTAL_TOPICS = 10
   N_PEER_TOPICS = 2
   N_REC_TOPICS = 2
   N_TALK_CANDIDATES = 5
   
-  IS_RUN_ALL = True
+  TK_ratings, TK_info, U_ftalks, R_mat = load_data()
   
-  talk_info_filename = '/Users/liviachang/Galvanize/capstone/data/talks_info_merged.csv'
-  user_rating_filename = '/Users/liviachang/Galvanize/capstone/data/users_info_transformed.csv'
-  rating_matrix_filename = ['/Users/liviachang/Galvanize/capstone/data/rating_matrix_small.csv',
-    '/Users/liviachang/Galvanize/capstone/data/rating_matrix.csv'][IS_RUN_ALL]
-  
-  rating_cols = ['Beautiful', 'Confusing', 'Courageous', 'Fascinating', \
-    'Funny','Informative', 'Ingenious', 'Inspiring', 'Jaw-dropping', \
-    'Longwinded', 'OK', 'Obnoxious', 'Persuasive', 'Unconvincing']
-  info_cols = ['speaker', 'title', 'ted_event', 'keywords', 'related_themes']
-  
-  talk_df_orig = pd.read_csv(talk_info_filename)
-  TK_ratings = talk_df_orig.copy()
-  TK_ratings.tid = TK_ratings.tid.astype(str)
-  TK_ratings = TK_ratings.set_index('tid')
-  TK_ratings = TK_ratings.ix[:,rating_cols]
-  
-  TK_info = talk_df_orig.copy()
-  TK_info.tid = TK_info.tid.astype(str)
-  TK_info = TK_info.set_index('tid')
-  TK_info = TK_info.ix[:, info_cols]
-
-  user_ftalk_df_orig = pd.read_csv(user_rating_filename)
-  user_ftalk_df = user_ftalk_df_orig.copy()
-  user_ftalk_df.tid = user_ftalk_df.tid.astype(int).astype(str)
-
-  U, V = build_nmf(rating_matrix_filename, N_TOTAL_TOPICS)
+  U, V = build_nmf(N_TOTAL_TOPICS, R_mat)
   U_ranks, U_gtopics = get_user_gtopics(U, N_PEER_TOPICS)
   G_users = get_group_users(U_gtopics)
   G_rtopics = get_group_rtopics(G_users, U_ranks, N_REC_TOPICS)
   U_rtopics = get_user_rtopics(U_gtopics, G_rtopics)
   TP_talks = get_topic_talks(V, N_TALK_CANDIDATES)
-  U_fratings = get_user_fav_ratings(user_ftalk_df, TK_ratings)
+  U_fratings = get_user_fav_ratings(U_ftalks, TK_ratings)
   U_rtalks = get_user_rec_talks(U_fratings, U_rtopics, TP_talks, TK_ratings)
 

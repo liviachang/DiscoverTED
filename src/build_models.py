@@ -77,20 +77,23 @@ def get_user_gtopics(U, N_PEER_TOPICS):
   ## this is used to define groups
   tmpf = ftPartial(get_user_gtopics_per_user, N_PEER_TOPICS=N_PEER_TOPICS)
   U_gtopics = U_ranks.apply(tmpf, axis=1)
+  U_gtopics = U_gtopics.to_dict()
 
   t2 = print_time('Getting users\' top {} topics as group topics'.format(N_PEER_TOPICS), t1)
-  print 'U_gtopics.shape = {}\n'.format(U_gtopics.shape)
+  print 'U_gtopics: #user = {}, # gtopics = {}\n'.format(len(U_gtopics), \
+    len(U_gtopics.values()[0].split() ))
 
   return U_ranks, U_gtopics
 
 def get_group_users(U_gtopics):
   t1 = print_time('Getting groups\' users based on gtopics')
+
+  u_gts = pd.Series( U_gtopics, name='gtopics' )
   ## find group users for each group with top N_PEER_TOPICS group topics
   ## groups is a dictionary {group_topics, user_ids}
   groups = {} 
-  for group_topic in U_gtopics.unique():
-    user_idx = np.where( U_gtopics==group_topic )
-    user_ids = U_gtopics.index[user_idx]
+  for group_topic in u_gts.unique():
+    user_ids = u_gts.index[u_gts==group_topic]
     groups[group_topic] = user_ids
 
   t2 = print_time('Getting groups\' users based on gtopics', t1)
@@ -139,9 +142,11 @@ def get_group_rtopics(G_users, U_ranks, N_REC_TOPICS):
 
 def get_user_rtopics(U_gtopics, G_rtopics):
   t1 = print_time('Getting users\' recommended topics')
-  
-  U_rtopics = U_gtopics.apply(lambda x: G_rtopics[x])
-  U_rtopics = U_rtopics.to_dict()
+ 
+  U_rtopics = {}
+  for (uid, gtopics) in U_gtopics.iteritems():
+    rtopics = G_rtopics[gtopics]
+    U_rtopics[uid] = rtopics
   
   t2 = print_time('Getting users\' recommended topics', t1)
 

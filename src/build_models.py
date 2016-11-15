@@ -10,8 +10,6 @@ from collections import Counter
 from time import time
 from datetime import datetime
 import os
-#import graphlab as gl
-#from mf import matrix_factorization
 
 def load_rating_data(rating_fn):
   t1 = print_time('Loading the rating data')
@@ -22,16 +20,17 @@ def load_rating_data(rating_fn):
 
   t2 = print_time('Loading the rating data', t1)
   print 'R.shape={}\n'.format(R.shape)
+
   return R
 
-def build_nmf(rating_fn, k, IS_LOAD_UV=True):
+def build_nmf(rating_fn, k, IS_LOAD_UV=False):
   ## get model filename
   model_fn = rating_fn.replace('/data/rating_matrix', '/model/UV_matrix')
 
   if IS_LOAD_UV and os.path.isfile(model_fn):
+    t1 = print_time('Loading NMF models with k={}'.format(k))
     with open(model_fn) as f:
       U, V = pickle.load(f)
-    return U, V
   else:
     t1 = print_time('Building NMF models with k={}'.format(k))
   
@@ -52,10 +51,10 @@ def build_nmf(rating_fn, k, IS_LOAD_UV=True):
     with open(model_fn, 'wb') as f:
       pickle.dump( (U,V), f)
 
-    t2 = print_time('Building NMF models with k={}'.format(k), t1)
-    print 'R.shape={}, U.shape={}, V.shape={}, nmf_err={:.4f}\n'.format(\
-      R.shape, U.shape, V.shape, E)
-    return U, V
+  t2 = print_time('Building NMF models with k={}'.format(k), t1)
+  print 'U.shape={}, V.shape={}\n'.format(U.shape, V.shape)
+  
+  return U, V
 
 def get_topic_rankings_per_user(x):
   n_topcis = len(x)
@@ -64,99 +63,115 @@ def get_topic_rankings_per_user(x):
   ranks = [tmp if tmp<=n_nonzero else np.nan for tmp in ranks]
   return ranks
 
-def get_ptopics_per_user(x, N_PEER_TOPICS):
+def get_user_gtopics_per_user(x, N_PEER_TOPICS):
   top_topics = sorted(np.where(x.values<=N_PEER_TOPICS)[0])
   return str(top_topics)
 
-def get_ptopics(U, N_PEER_TOPICS):
-  t1 = print_time('Getting {} peer topics for each user'.format(N_PEER_TOPICS))
+def get_user_gtopics(U, N_PEER_TOPICS):
+  t1 = print_time('Getting users\' top {} topics as group topics'.format(N_PEER_TOPICS))
   ## get the rankings of the topcis (i.e. latent featues) for each user based on U matrix
   ## U_ranks.shape = n_users x k_topics
   U_ranks = U.apply(get_topic_rankings_per_user, axis=1)
   
   ## get the top N_PEER_TOPICS topics for each user
-  ## this is used to define peers
-  tmpf = ftPartial(get_ptopics_per_user, N_PEER_TOPICS=N_PEER_TOPICS)
-  U_ptopics = U_ranks.apply(tmpf, axis=1)
+  ## this is used to define groups
+  tmpf = ftPartial(get_user_gtopics_per_user, N_PEER_TOPICS=N_PEER_TOPICS)
+  U_gtopics = U_ranks.apply(tmpf, axis=1)
 
-  t2 = print_time('Getting {} peer topics for each user'.format(N_PEER_TOPICS), t1)
-  print 'U_ptopics.shape = {}\n'.format(U_ptopics.shape)
+  t2 = print_time('Getting users\' top {} topics as group topics'.format(N_PEER_TOPICS), t1)
+  print 'U_gtopics.shape = {}\n'.format(U_gtopics.shape)
 
-  return U_ranks, U_ptopics
+  return U_ranks, U_gtopics
 
-def get_ptopic_peers(U_ptopics):
-  t1 = print_time('Getting the mapping from ptopics to peers')
-  ## find peers for each group with top N_PEER_TOPICS peer topics
-  ## peers is a dictionary {peer_topics, user_ids}
-  peers = {} 
-  for peer_topic in U_ptopics.unique():
-    user_idx = np.where( U_ptopics==peer_topic )
-    user_ids = U_ptopics.index[user_idx]
-    peers[peer_topic] = user_ids
+def get_group_users(U_gtopics):
+  t1 = print_time('Getting groups\' users based on gtopics')
+  ## find group users for each group with top N_PEER_TOPICS group topics
+  ## groups is a dictionary {group_topics, user_ids}
+  groups = {} 
+  for group_topic in U_gtopics.unique():
+    user_idx = np.where( U_gtopics==group_topic )
+    user_ids = U_gtopics.index[user_idx]
+    groups[group_topic] = user_ids
 
-  t2 = print_time('Getting the mapping from ptopics to peers', t1)
+  t2 = print_time('Getting groups\' users based on gtopics', t1)
   
-  psize = [len(v) for k,v in peers.iteritems()]
+  psize = [len(v) for k,v in groups.iteritems()]
   print '# grps={}, # total users={}, (min, max) grp size=({}, {})\n'.format( \
-    len(peers), sum(psize), min(psize), max(psize) )
+    len(groups), sum(psize), min(psize), max(psize) )
 
-  return peers
+  return groups
 
-
-def find_peers(U, N_PEER_TOPICS=2):
-  print '\nFinding peers based on latent features'
-
-  ## for every user in U matrix, find top N_PEER_TOPICS as the peer_topics
-  ## user_ptopics.shape = n_users x N_PEER_TOPICS
-  user_ptopics = get_ptopics(U, N_PEER_TOPICS)
-  ## mapper_ptopics_to_peers is a dict with (key, value) = (peer topics, user ids)
-  mapper_ptopics_to_peers = get_ptopic_peers(user_ptopics)
-
-
-  psize = [len(v) for k,v in peers.iteritems()]
-  print '# grps={}, # users={}, min/max grp size={}, {}'.format( \
-    len(peers), sum(psize), min(psize), max(psize) )
-  #print 'most common size of groups:\n{}'.format(Counter(psize).most_common())
-
-  return grps, peers, U_ranks
-
-def get_rec_topic_per_user(cur_user, U_ranks, grps, peers):
-  cur_grp = grps[cur_user]
-  cur_top_topics = cur_grp.replace(r'[', '').replace(']', '').split(', ')
-
-  ## if no latent featues to define peers for a given user
-  ## define peers as all users
-  if cur_top_topics==['']: 
-    cur_peers = U_ranks.index
-    cur_peers = cur_peers[cur_peers!=cur_user]
-    U_new_ranks = U_ranks.ix[cur_peers,:]
-    cur_avg_rank = U_new_ranks.apply(np.mean, axis=0)
+def get_group_rtopics_per_group(target_user_gtopics, G_users, U_ranks, N_REC_TOPICS):
+  
+  ## if no latent featues to define groups for a given user
+  ## define groups as all users
+  if target_user_gtopics == '[]':
+    target_U_ranks = U_ranks
 
   else:
-    cur_top_topics = map(int, cur_top_topics)
-    cur_peers = peers[cur_grp]
-    cur_peers = cur_peers[cur_peers!=cur_user]
-    U_fav_ranks = U_ranks.ix[cur_peers, cur_top_topics]
-    U_new_ranks = U_ranks.ix[cur_peers,:].copy().drop(cur_top_topics, axis=1)
-    cur_avg_rank = U_new_ranks.apply(np.mean, axis=0)
+    target_users = G_users[target_user_gtopics]
+
+    gtopics = target_user_gtopics.replace(r'[', '').replace(']', '').split(', ')
+    gtopics = map(int, gtopics)
+    target_U_ranks = U_ranks.ix[target_users,:].copy().drop(gtopics, axis=1)
+
+    ## if all rankings are NaN
+    if target_U_ranks.isnull().sum().sum() == np.product(target_U_ranks.shape):
+      target_U_ranks = U_ranks.copy().drop(gtopics, axis=1)
   
-  rec_topic = cur_avg_rank.index[ cur_avg_rank.argsort().iloc[0] ]
-  return rec_topic
+  tcandidates_avg_rank = target_U_ranks.apply(np.mean, axis=0)
+  rec_topics_all = tcandidates_avg_rank.index[tcandidates_avg_rank.argsort()]
+  rec_topics = sorted(rec_topics_all[:N_REC_TOPICS])
+  return rec_topics
+
+def get_group_rtopics(G_users, U_ranks, N_REC_TOPICS):
+  t1 = print_time('Getting groups\' {} recommended topics'.format(N_REC_TOPICS))
+
+  G_rtopics = {}
+  for gtopics in G_users.iterkeys():
+    rtopics = get_group_rtopics_per_group(gtopics, G_users, U_ranks, N_REC_TOPICS)
+    G_rtopics[gtopics] = rtopics
+
+  t2 = print_time('Getting groups\' {} recommended topics'.format(N_REC_TOPICS), t1)
+  print '# grps={}, # rec topics={}\n'.format(len(G_rtopics), N_REC_TOPICS)
+
+  return G_rtopics
+
+def get_user_rtopics(U_gtopics, G_rtopics):
+  t1 = print_time('Getting users\' recommended topics')
+  
+  U_rtopics = U_gtopics.apply(lambda x: G_rtopics[x])
+  U_rtopics = U_rtopics.to_dict()
+  
+  t2 = print_time('Getting users\' recommended topics', t1)
+
+  return U_rtopics
+
+#def get_group_rtopics_per_group(cur_user, U_ranks, grps, groups): ## STOP HERE, add flag
+#  cur_grp = grps[cur_user]
+#  cur_top_topics = cur_grp.replace(r'[', '').replace(']', '').split(', ')
+#
+#  ## if no latent featues to define groups for a given user
+#  ## define groups as all users
+#  if cur_top_topics==['']: 
+#    cur_groups = U_ranks.index
+#    cur_groups = cur_groups[cur_groups!=cur_user]
+#    U_new_ranks = U_ranks.ix[cur_groups,:]
+#    cur_avg_rank = U_new_ranks.apply(np.mean, axis=0)
+#
+#  else:
+#    cur_top_topics = map(int, cur_top_topics)
+#    cur_groups = groups[cur_grp]
+#    cur_groups = cur_groups[cur_groups!=cur_user]
+#    U_fav_ranks = U_ranks.ix[cur_groups, cur_top_topics]
+#    U_new_ranks = U_ranks.ix[cur_groups,:].copy().drop(cur_top_topics, axis=1)
+#    cur_avg_rank = U_new_ranks.apply(np.mean, axis=0)
+#  
+#  rec_topic = cur_avg_rank.index[ cur_avg_rank.argsort().iloc[0] ]
+#  return rec_topic
 
 
-def get_rec_topic(U_ranks, grps, peers):
-  t1 = print_time('Getting recommended topic')
-  print '\nFinding one candidate topic based on peers'
-  users = pd.Series( U_ranks.index )
-  U_rtopic = users.apply( 
-    ftPartial(get_rec_topic_per_user, U_ranks=U_ranks, grps=grps, peers=peers))
-
-  U_rtopic.index = U_ranks.index
-  t2 = print_time('Getting recommended topic', t1)
-  print 'U_rtopic.shape = {}'.format(U_rtopic.shape)
-  return U_rtopic
-
-def get_top_talks_per_topic(f_vals, n_top):
+def get_topic_talks_per_topic(f_vals, n_top):
   ''' f_vals (say, average tfidf): list | f_nms (say, vocab): list
   return top f_nms based on f_vals (i.e. show top features)
   '''
@@ -164,54 +179,68 @@ def get_top_talks_per_topic(f_vals, n_top):
   return top_idx
 
 
-def get_talks_candidates(V, N_TALK_CANDIDATES=5):
-  print '\nFinding talk candidates based on the candidate topic'
-  tmpf = ftPartial(get_top_talks_per_topic, n_top=N_TALK_CANDIDATES)
+def get_topic_talks(V, N_TALK_CANDIDATES=5):
+  t1 = print_time('Getting topics\' top {} talks'.format(N_TALK_CANDIDATES))
+
+  tmpf = ftPartial(get_topic_talks_per_topic, n_top=N_TALK_CANDIDATES)
   top_talks_idx = V.apply(tmpf, axis=1)
   top_talk_ids = V.columns[ top_talks_idx.values ]
+  
+  t2 = print_time('Getting topics\' top {} talks'.format(N_TALK_CANDIDATES), t1)
+
   return top_talk_ids
 
-def get_rec_talk_per_user(uid, rdf, tdf, rec_topics, talk_candidates):
+def get_user_fav_ratings(udf, tdf):
+  t1 = print_time('Getting ratings for users\' favorite talks')
 
-  rating_cols = ['Beautiful', 'Confusing', 'Courageous', 'Fascinating', \
-    'Funny','Informative', 'Ingenious', 'Inspiring', 'Jaw-dropping', \
-    'Longwinded', 'OK', 'Obnoxious', 'Persuasive', 'Unconvincing', 'tid']
-  fav_tids = rdf.ix[rdf['uid_idiap']==uid, 'tid']
-  fav_ratings = tdf.ix[ tdf['tid'].isin(fav_tids), rating_cols]
-  fav_ratings = fav_ratings.set_index('tid')
+  U_ftalks = udf[['uid_idiap', 'tid']].groupby('uid_idiap').tid.apply(list)
+  U_ftalks = U_ftalks.to_dict()
 
-  candidate_tids = talk_candidates[rec_topics[uid]].astype(int)
-  candidate_ratings = tdf.ix[ tdf['tid'].isin(candidate_tids), rating_cols]
-  candidate_ratings = candidate_ratings.set_index('tid')
+  U_fratings = {}
+  for (uid, tids) in U_ftalks.iteritems():
+    U_fratings[uid] = tdf.ix[tids]
+  
+  t2 = print_time('Getting ratings for users\' favorite talks', t1)
+  
+  return U_fratings
 
-  tmpf = ftPartial(get_rating_MSE, fav_ratings=fav_ratings)
-  candidate_dists = candidate_ratings.apply( tmpf, axis=1)
-  rec_tid = candidate_dists.argsort().index[0]
+def get_closest_rtalk(talk_ratings, fav_ratings, OPTION=['MEAN_DIST', 'MIN_DIST'][1]):
+  fr = fav_ratings.values
+  dists = {}
+  for (tid, tr) in zip(talk_ratings.index, talk_ratings.values):
+    dists_to_each_fr = np.sum( (tr-fr)**2, axis=1)
+    if OPTION=='MEAN_DIST':
+      dists[tid] = dists_to_each_fr.mean()
+    elif OPTION=='MIN_DIST':
+      dists[tid] = dists_to_each_fr.min()
 
-  #info_cols = ['speaker', 'title', 'ted_event', 'keywords', 'related_themes']
-  #fav_talks = tdf.ix[ tdf['tid'].isin(fav_tids), info_cols]
-  #rec_talk = tdf.ix[ tdf['tid']==rec_tid, info_cols]
-  #print '\nuser {}\n=====fav_talks=====\n{}\n\n======rec_talk=====\n{}'.format(\
-  #  uid, fav_talks, rec_talk)
+  rtalk = sorted(dists, key=dists.get)[0]
+  return rtalk
 
-  return rec_tid
 
-def get_rating_MSE(talk_rating, fav_ratings):
-  dists = (talk_rating - fav_ratings)**2
-  dists = np.apply_along_axis(np.sum, 1, dists)
-  mean_dist = np.mean(dists)
-  return mean_dist
+def get_user_rec_talks_per_user(fratings, rtopics_talks, TK_ratings):
+  rtalks = []
+  for rtt in rtopics_talks:
+    tratings = TK_ratings.ix[rtt,:]
+    rtalks.append( get_closest_rtalk(tratings, fratings) )
 
-def get_rec_talk(rec_topics, talk_candidates, tdf, rdf):
-  print '\nPicking one recommended talk based on the talk candidates and ratings'
-  uids = pd.Series(rec_topics.index)
-  tmpf = ftPartial(get_rec_talk_per_user, rdf=rdf, tdf=tdf,
-    rec_topics=rec_topics, talk_candidates=talk_candidates)
-  rec_tids = uids.apply(tmpf)
-  rec_tids.index = uids
+  return rtalks
 
-  return rec_tids
+def get_user_rec_talks(U_fratings, U_rtopics, TP_talks, TK_ratings):
 
+  t1 = print_time('Getting users\' recommended talks')
+
+  U_rtalks = {}
+
+  for (uid, fratings) in U_fratings.iteritems():
+    rtopics = U_rtopics[uid]
+    rtopics_talks = TP_talks[rtopics]
+    U_rtalks[uid] = get_user_rec_talks_per_user( fratings, rtopics_talks, TK_ratings)
+  
+  t2 = print_time('Getting users\' recommended talks', t1)
+
+  return U_rtalks
+  
 def print_time(msg, t1=None):
   t2 = time()
 
@@ -222,51 +251,45 @@ def print_time(msg, t1=None):
     print '{}: {} <== {:.0f} secs'.format(t2_str, msg, t2-t1)
   return t2
 
-  
-
-#if __name__ == '__main__':
-if False:
+if __name__ == '__main__':
   N_TOTAL_TOPICS = 10
   N_PEER_TOPICS = 2
+  N_REC_TOPICS = 2
   N_TALK_CANDIDATES = 5
   
-  IS_RUN_ALL = False
+  IS_RUN_ALL = True
   
   talk_info_filename = '/Users/liviachang/Galvanize/capstone/data/talks_info_merged.csv'
   user_rating_filename = '/Users/liviachang/Galvanize/capstone/data/users_info_transformed.csv'
   rating_matrix_filename = ['/Users/liviachang/Galvanize/capstone/data/rating_matrix_small.csv',
     '/Users/liviachang/Galvanize/capstone/data/rating_matrix.csv'][IS_RUN_ALL]
+  
+  rating_cols = ['Beautiful', 'Confusing', 'Courageous', 'Fascinating', \
+    'Funny','Informative', 'Ingenious', 'Inspiring', 'Jaw-dropping', \
+    'Longwinded', 'OK', 'Obnoxious', 'Persuasive', 'Unconvincing']
+  info_cols = ['speaker', 'title', 'ted_event', 'keywords', 'related_themes']
+  
+  talk_df_orig = pd.read_csv(talk_info_filename)
+  TK_ratings = talk_df_orig.copy()
+  TK_ratings.tid = TK_ratings.tid.astype(str)
+  TK_ratings = TK_ratings.set_index('tid')
+  TK_ratings = TK_ratings.ix[:,rating_cols]
+  
+  TK_info = talk_df_orig.copy()
+  TK_info.tid = TK_info.tid.astype(str)
+  TK_info = TK_info.set_index('tid')
+  TK_info = TK_info.ix[:, info_cols]
+
+  user_ftalk_df_orig = pd.read_csv(user_rating_filename)
+  user_ftalk_df = user_ftalk_df_orig.copy()
+  user_ftalk_df.tid = user_ftalk_df.tid.astype(int).astype(str)
 
   U, V = build_nmf(rating_matrix_filename, N_TOTAL_TOPICS)
-  U_ranks, U_ptopics = get_ptopics(U, N_PEER_TOPICS)
-  ptopic_to_peers = get_ptopic_peers(U_ptopics)
-  U_rtopic = get_rec_topic(U_ranks, U_ptopics, ptopic_to_peers) ## shape=(n_users,)
-
-  #lf_grps, peers, U_ranks = find_peers(U, N_PEER_TOPICS)
-
-  #t3 = print_time('Time to find peers', t2)
-
-  #rec_topics = get_rec_topic(U_ranks, U_ptopics, ptopic_to_peers) ## shape=(n_users,)
-  
-  t4 = print_time('Time to find topic from peers', t3)
-
-  talk_candidates = get_talks_candidates(V, N_TALK_CANDIDATES) ## shape=(k, N_TALK_CANDIDATES)
-  
-  t5 = print_time('Time to find talks from topic', t4)
-  
-  tdf = pd.read_csv(talk_info_filename)
-  rdf = pd.read_csv(user_rating_filename)
-  rec_tids = get_rec_talk(rec_topics, talk_candidates, tdf, rdf)
-
-  info_cols = ['tid', 'speaker', 'title', 'ted_event', 'keywords', 'related_themes']
-  rec_talks = rec_tids.to_frame(name='tid').reset_index()
-  rec_talks = pd.merge( rec_talks, tdf[info_cols], how='left', on='tid')
-  rec_talks = rec_talks.set_index('uid_idiap')
-  
-  t6 = print_time('Time to pick one talk from candidates', t5)
-
-  rec_broader_fn = '/Users/liviachang/Galvanize/capstone/model/rec_talks_broader.pkl'
-  with open(rec_broader_fn, 'wb') as f:
-    pickle.dump( rec_talks, f)
-
+  U_ranks, U_gtopics = get_user_gtopics(U, N_PEER_TOPICS)
+  G_users = get_group_users(U_gtopics)
+  G_rtopics = get_group_rtopics(G_users, U_ranks, N_REC_TOPICS)
+  U_rtopics = get_user_rtopics(U_gtopics, G_rtopics)
+  TP_talks = get_topic_talks(V, N_TALK_CANDIDATES)
+  U_fratings = get_user_fav_ratings(user_ftalk_df, TK_ratings)
+  U_rtalks = get_user_rec_talks(U_fratings, U_rtopics, TP_talks, TK_ratings)
 

@@ -16,8 +16,7 @@ def build_nmf(k, R):
   ## get NMF R = U x V
   ## U.shape = n_users x k_topics
   ## V.shape = k_topics x m_talks
-  nmf = NMF(n_components = k, random_state=319)
-  nmf.fit(R.values)
+  nmf = NMF(n_components = k, random_state=319).fit(R.values)
   U = pd.DataFrame(nmf.transform(R.values), index=R.index)
   V = pd.DataFrame(nmf.components_, columns=R.columns)
   #E = nmf.reconstruction_err_
@@ -147,22 +146,19 @@ def get_user_rtopics(U_gtopics, G_rtopics):
 #  return rec_topic
 
 
-def get_topic_talks_per_topic(f_vals, n_top):
-  ''' f_vals (say, average tfidf): list | f_nms (say, vocab): list
-  return top f_nms based on f_vals (i.e. show top features)
-  '''
-  top_idx = np.argsort(f_vals)[::-1][:n_top]
+def get_topic_talks_per_topic(talk_scores, n_talks):
+  top_idx = np.argsort(talk_scores)[::-1][:n_talks]
   return top_idx
 
 
-def get_topic_talks(V, N_TALK_CANDIDATES=5):
-  t1 = print_time('Getting topics\' top {} talks'.format(N_TALK_CANDIDATES))
+def get_topic_talks(V, n_talks=N_TALK_CANDIDATES):
+  t1 = print_time('Getting topics\' top {} talks'.format(n_talks))
 
-  tmpf = ftPartial(get_topic_talks_per_topic, n_top=N_TALK_CANDIDATES)
+  tmpf = ftPartial(get_topic_talks_per_topic, n_talks=n_talks)
   top_talks_idx = V.apply(tmpf, axis=1)
   top_talk_ids = V.columns[ top_talks_idx.values ]
 
-  t2 = print_time('Getting topics\' top {} talks'.format(N_TALK_CANDIDATES), t1)
+  t2 = print_time('Getting topics\' top {} talks'.format(n_talks), t1)
 
   return top_talk_ids
 
@@ -273,11 +269,19 @@ def load_ted_data():
 
   return TK_ratings, TK_info, U_ftalks, R_mat
 
+def save_model_for_new_user(V, G_rtopics):
+  print 'Saving (V, G_rtopics)'
+  with open(BROADER_MODEL_NEW_USERS_FN, 'wb') as f:
+    pickle.dump((V, G_rtopics), f)
+
+def save_model_for_existing_users(U_rtalks):
+  print 'Saving (U_rtalks)'
+  with open(BROADER_MODEL_EXISTING_USERS_FN, 'wb') as f:
+    pickle.dump(U_rtalks, f)
+
 if __name__ == '__main__':
-  N_TOTAL_TOPICS = 10
-  N_GROUP_TOPICS = 2
-  N_REC_TOPICS = 2
-  N_TALK_CANDIDATES = 5
+  print '# topics = {}, # fav topics for groups = {}, # rec topics = {}'.format(\
+    N_TOTAL_TOPICS, N_GROUP_TOPICS, N_REC_TOPICS)
   
   TK_ratings, TK_info, U_ftalks, R_mat = load_ted_data()
   
@@ -290,6 +294,6 @@ if __name__ == '__main__':
   U_fratings = get_user_fav_ratings(U_ftalks, TK_ratings)
   U_rtalks = get_user_rec_talks(U_fratings, U_rtopics, TP_talks, TK_ratings)
 
-  with open(BROADER_MODEL_FN, 'wb') as f:
-    pickle.dump( (U, V, U_gtopics, G_rtopics, TP_talks, U_fratings, U_rtalks), f)
+  save_model_for_new_user(V, G_rtopics)
+  save_model_for_existing_users(U_rtalks)
 

@@ -5,6 +5,7 @@
 *.html
 *.csv
 *.pkl
+.gitignore
 data*
 data/*
 final.proposal.md

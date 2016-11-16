@@ -10,27 +10,17 @@ from time import time
 from datetime import datetime
 import os
 
-def build_nmf(k, R=None, IS_LOAD_UV=False):
+def build_nmf(k, R):
+  t1 = print_time('Building NMF models with k={}'.format(k))
 
-  if IS_LOAD_UV and os.path.isfile(MODEL_FN):
-    t1 = print_time('Loading NMF models with k={}'.format(k))
-    with open(MODEL_FN) as f:
-      U, V = pickle.load(f)
-  else:
-    t1 = print_time('Building NMF models with k={}'.format(k))
-  
-    ## get NMF R = U x V
-    ## U.shape = n_users x k_topics
-    ## V.shape = k_topics x m_talks
-    nmf = NMF(n_components = k, random_state=319)
-    nmf.fit(R.values)
-    U = pd.DataFrame(nmf.transform(R.values), index=R.index)
-    V = pd.DataFrame(nmf.components_, columns=R.columns)
-    E = nmf.reconstruction_err_
-    
-    ## save the model (i.e. U and V matrix)
-    with open(MODEL_FN, 'wb') as f:
-      pickle.dump( (U,V), f)
+  ## get NMF R = U x V
+  ## U.shape = n_users x k_topics
+  ## V.shape = k_topics x m_talks
+  nmf = NMF(n_components = k, random_state=319)
+  nmf.fit(R.values)
+  U = pd.DataFrame(nmf.transform(R.values), index=R.index)
+  V = pd.DataFrame(nmf.components_, columns=R.columns)
+  #E = nmf.reconstruction_err_
 
   t2 = print_time('Building NMF models with k={}'.format(k), t1)
   print 'U.shape={}, V.shape={}\n'.format(U.shape, V.shape)
@@ -44,23 +34,23 @@ def get_topic_rankings_per_user(x):
   ranks = [tmp if tmp<=n_nonzero else np.nan for tmp in ranks]
   return ranks
 
-def get_user_gtopics_per_user(x, N_PEER_TOPICS):
-  top_topics = sorted(np.where(x.values<=N_PEER_TOPICS)[0])
+def get_user_gtopics_per_user(x, N_GROUP_TOPICS):
+  top_topics = sorted(np.where(x.values<=N_GROUP_TOPICS)[0])
   return str(top_topics)
 
-def get_user_gtopics(U, N_PEER_TOPICS):
-  t1 = print_time('Getting users\' top {} topics as group topics'.format(N_PEER_TOPICS))
+def get_user_gtopics(U, N_GROUP_TOPICS):
+  t1 = print_time('Getting users\' top {} topics as group topics'.format(N_GROUP_TOPICS))
   ## get the rankings of the topcis (i.e. latent featues) for each user based on U matrix
   ## U_ranks.shape = n_users x k_topics
   U_ranks = U.apply(get_topic_rankings_per_user, axis=1)
   
-  ## get the top N_PEER_TOPICS topics for each user
+  ## get the top N_GROUP_TOPICS topics for each user
   ## this is used to define groups
-  tmpf = ftPartial(get_user_gtopics_per_user, N_PEER_TOPICS=N_PEER_TOPICS)
+  tmpf = ftPartial(get_user_gtopics_per_user, N_GROUP_TOPICS=N_GROUP_TOPICS)
   U_gtopics = U_ranks.apply(tmpf, axis=1)
   U_gtopics = U_gtopics.to_dict()
 
-  t2 = print_time('Getting users\' top {} topics as group topics'.format(N_PEER_TOPICS), t1)
+  t2 = print_time('Getting users\' top {} topics as group topics'.format(N_GROUP_TOPICS), t1)
   print 'U_gtopics: #user = {}, # gtopics = {}\n'.format(len(U_gtopics), \
     len(U_gtopics.values()[0].split() ))
 
@@ -70,7 +60,7 @@ def get_group_users(U_gtopics):
   t1 = print_time('Getting groups\' users based on gtopics')
 
   u_gts = pd.Series( U_gtopics, name='gtopics' )
-  ## find group users for each group with top N_PEER_TOPICS group topics
+  ## find group users for each group with top N_GROUP_TOPICS group topics
   ## groups is a dictionary {group_topics, user_ids}
   groups = {} 
   for group_topic in u_gts.unique():
@@ -118,9 +108,6 @@ def get_group_rtopics(G_users, U_ranks, N_REC_TOPICS):
 
   t2 = print_time('Getting groups\' {} recommended topics'.format(N_REC_TOPICS), t1)
   print '# grps={}, # rec topics={}\n'.format(len(G_rtopics), N_REC_TOPICS)
-
-  with open(GROUP_RTOPICS_FN, 'wb') as f:
-    pickle.dump( G_rtopics, f )
 
   return G_rtopics
 
@@ -175,9 +162,6 @@ def get_topic_talks(V, N_TALK_CANDIDATES=5):
   top_talks_idx = V.apply(tmpf, axis=1)
   top_talk_ids = V.columns[ top_talks_idx.values ]
 
-  with open(TOPIC_TALKS_FN, 'wb') as f:
-    pickle.dump(top_talk_ids, f)
-  
   t2 = print_time('Getting topics\' top {} talks'.format(N_TALK_CANDIDATES), t1)
 
   return top_talk_ids
@@ -255,7 +239,7 @@ def load_talk_ratings(fn):
   return TK_ratings
 
 def load_talk_info(fn):
-  info_cols = ['speaker', 'title', 'ted_event', 'keywords', 'related_themes']
+  info_cols = ['speaker', 'title', 'ted_event', 'description', 'keywords', 'related_themes']
   
   TK_info = pd.read_csv(fn)
   TK_info.tid = TK_info.tid.astype(str)
@@ -281,7 +265,7 @@ def load_rating_data(fn):
 
   return R
 
-def load_data():
+def load_ted_data():
   TK_ratings = load_talk_ratings(TALK_INFO_FN)
   TK_info = load_talk_info(TALK_INFO_FN)
   U_ftalks = load_user_fav_talks(USER_TALK_FN)
@@ -291,18 +275,21 @@ def load_data():
 
 if __name__ == '__main__':
   N_TOTAL_TOPICS = 10
-  N_PEER_TOPICS = 2
+  N_GROUP_TOPICS = 2
   N_REC_TOPICS = 2
   N_TALK_CANDIDATES = 5
   
-  TK_ratings, TK_info, U_ftalks, R_mat = load_data()
+  TK_ratings, TK_info, U_ftalks, R_mat = load_ted_data()
   
   U, V = build_nmf(N_TOTAL_TOPICS, R_mat)
-  U_ranks, U_gtopics = get_user_gtopics(U, N_PEER_TOPICS)
+  U_ranks, U_gtopics = get_user_gtopics(U, N_GROUP_TOPICS)
   G_users = get_group_users(U_gtopics)
   G_rtopics = get_group_rtopics(G_users, U_ranks, N_REC_TOPICS)
   U_rtopics = get_user_rtopics(U_gtopics, G_rtopics)
   TP_talks = get_topic_talks(V, N_TALK_CANDIDATES)
   U_fratings = get_user_fav_ratings(U_ftalks, TK_ratings)
   U_rtalks = get_user_rec_talks(U_fratings, U_rtopics, TP_talks, TK_ratings)
+
+  with open(BROADER_MODEL_FN, 'wb') as f:
+    pickle.dump( (U, V, U_gtopics, G_rtopics, TP_talks, U_fratings, U_rtalks), f)
 

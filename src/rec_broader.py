@@ -1,8 +1,8 @@
 from __future__ import division
 from src.configs import *
 import cPickle as pickle
-from src.build_models import load_ted_data, get_topic_talks
-from src.build_models import get_user_rtopics, get_user_rec_talks
+from src.build_models import load_talk_data, get_topic_talks
+from src.build_models import get_user_rtopics, get_user_rec_talks_per_user
 import numpy as np
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -109,7 +109,7 @@ def rec_talks(uid, TK_info, TK_ratings):
 
 if __name__ == '__main__':
   print 'Loading TED data'
-  TK_ratings, TK_info, U_ftalks, R_mat = load_ted_data()
+  TK_ratings, TK_info = load_talk_data()
 
   uid = ['000fe7196ce60cdfa26e1e69364c85ee8aaf8931', 'New'][1]
   rec_talks(uid, TK_info, TK_ratings)

@@ -223,49 +223,49 @@ def print_time(msg, t1=None):
     print '{}: {} <== {:.0f} secs'.format(t2_str, msg, t2-t1)
   return t2
 
-def load_talk_ratings(fn):
+def load_talk_data(fn=TALK_DATA_FN):
+  t1 = print_time('Loading talk data')
+
+  tdf = pd.read_csv(fn)
+  
+  ## load talk ratings
   rating_cols = ['Beautiful', 'Confusing', 'Courageous', 'Fascinating', \
     'Funny','Informative', 'Ingenious', 'Inspiring', 'Jaw-dropping', \
     'Longwinded', 'OK', 'Obnoxious', 'Persuasive', 'Unconvincing']
-
-  TK_ratings = pd.read_csv(fn)
+  TK_ratings = tdf.copy()
   TK_ratings.tid = TK_ratings.tid.astype(str)
   TK_ratings = TK_ratings.set_index('tid')
   TK_ratings = TK_ratings.ix[:,rating_cols]
-  return TK_ratings
 
-def load_talk_info(fn):
+  ## load talk info
   info_cols = ['speaker', 'title', 'ted_event', 'description', 'keywords', 'related_themes']
-  
-  TK_info = pd.read_csv(fn)
+  TK_info = tdf.copy()
   TK_info.tid = TK_info.tid.astype(str)
   TK_info = TK_info.set_index('tid')
   TK_info = TK_info.ix[:, info_cols]
-  return TK_info
+  
+  t2 = print_time('Loading talk data', t1)
 
-def load_user_fav_talks(fn):
-  user_ftalk_df_orig = pd.read_csv(fn)
-  user_ftalk_df = user_ftalk_df_orig.copy()
+  return TK_ratings, TK_info
+
+def load_user_data(user_fn=USER_TALK_FN, rating_fn=RATING_MATRIX_FN):
+  t1 = print_time('Loading user data')
+
+  ## load the dataframe with each row as user-ftalk
+  user_ftalk_df = pd.read_csv(user_fn)
   user_ftalk_df.tid = user_ftalk_df.tid.astype(int).astype(str)
-  return user_ftalk_df
+  
+  ## load the 0-1 matrix with rows=users and columns=talks
+  ratings_mat = pd.read_csv(rating_fn)
+  ratings_mat = ratings_mat.set_index('uid_idiap')
+  
+  t2 = print_time('Loading user data', t1)
 
-def load_rating_data(fn):
-  t1 = print_time('Loading the rating data')
-
-  ## load the data
-  R = pd.read_csv(fn)
-  R = R.set_index('uid_idiap')
-
-  t2 = print_time('Loading the rating data', t1)
-  print 'R.shape={}\n'.format(R.shape)
-
-  return R
+  return user_ftalk_df, ratings_mat
 
 def load_ted_data():
-  TK_ratings = load_talk_ratings(TALK_INFO_FN)
-  TK_info = load_talk_info(TALK_INFO_FN)
-  U_ftalks = load_user_fav_talks(USER_TALK_FN)
-  R_mat = load_rating_data(RATING_MATRIX_FN)
+  TK_ratings, TK_info = load_talk_data()
+  U_ftalks, R_mat = load_user_data()
 
   return TK_ratings, TK_info, U_ftalks, R_mat
 

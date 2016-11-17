@@ -3,19 +3,21 @@ from datetime import datetime
 from functools import partial as ftPartial
 from gensim import corpora
 from gensim.models.ldamodel import LdaModel
+from itertools import combinations
 from nltk.stem.porter import PorterStemmer
 from nltk.tokenize import RegexpTokenizer
 from scipy.stats import rankdata
 from sklearn.decomposition import NMF
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import linear_kernel
 from stop_words import get_stop_words
 from time import time
 import cPickle as pickle
 import numpy as np
 import os
 import pandas as pd
+import re
 import textwrap
-
-
 
 RATING_MATRIX_FN = '/Users/liviachang/Galvanize/capstone/data/rating_matrix.csv'
 TALK_DATA_FN = '/Users/liviachang/Galvanize/capstone/data/talks_info_merged.csv'
@@ -26,7 +28,12 @@ BROADER_MODEL_EXISTING_USERS_FN = '/Users/liviachang/Galvanize/capstone/model/re
 
 LDA_MODEL_FN = '/Users/liviachang/Galvanize/capstone/model/model_lda.pkl'
 LDA_TOPICS_FN = '/Users/liviachang/Galvanize/capstone/model/data_lda_topics.pkl'
-  
+GROUP_DATA_FN = '/Users/liviachang/Galvanize/capstone/model/data_user_groups.pkl'
+
+RATING_TYPES = ['Beautiful', 'Confusing', 'Courageous', 'Fascinating', \
+  'Funny','Informative', 'Ingenious', 'Inspiring', 'Jaw-dropping', \
+  'Longwinded', 'OK', 'Obnoxious', 'Persuasive', 'Unconvincing']
+
 N_TOTAL_TOPICS = 10
 N_GROUP_TOPICS = 2
 N_REC_TOPICS = 2
@@ -66,8 +73,6 @@ def load_talk_data(fn=TALK_DATA_FN, is_print=IS_PRINT_TIME):
   TK_info = TK_info.set_index('tid')
   TK_info = TK_info.ix[:, info_cols]
   
-  t2 = print_time('Loading talk data', t1)
-
   return TK_ratings, TK_info
 
 def load_user_data(user_fn=USER_TALK_FN, rating_fn=RATING_MATRIX_FN):
@@ -81,8 +86,6 @@ def load_user_data(user_fn=USER_TALK_FN, rating_fn=RATING_MATRIX_FN):
   ratings_mat = pd.read_csv(rating_fn)
   ratings_mat = ratings_mat.set_index('uid_idiap')
   
-  t2 = print_time('Loading user data', t1)
-
   return user_ftalk_df, ratings_mat
 
 def load_ted_data():
@@ -91,3 +94,17 @@ def load_ted_data():
 
   return TK_ratings, TK_info, U_ftalks, R_mat
 
+def load_lda_topics_data():
+  with open(LDA_TOPICS_FN) as f:
+    TK_topics, TP_info = pickle.load(f)
+  return TK_topics, TP_info
+
+def load_lda_model_data():
+  with open(LDA_MODEL_FN) as f:
+    token_mapper, lda = pickle.load(f)
+  return token_mapper, lda
+
+def load_group_data():
+  with open(GROUP_DATA_FN) as f:
+    G_rtopics = pickle.load(f)
+  return G_rtopics

@@ -77,17 +77,6 @@ def get_topic_score_names():
   df_cols = df_cols + ['top_topic1', 'top_topic2']
   return df_cols
 
-def get_topics_from_text(text, id2word, mdl):
-  tknizer = RegexpTokenizer(r'\w+')
-  stop_wds = get_stop_words('en')
-  pstemmer = PorterStemmer()
-  new_tokens = tokenize_talk_doc(text, tknizer, stop_wds, pstemmer)
-
-  new_tf = id2word.doc2bow(new_tokens)
-  topics = get_topics_from_tf(new_tf, mdl)
-  result = pd.Series(topics, index=get_topic_score_names())
-  return result
-
 def get_topic_all_docs(tids, TK_info):
   talks = TK_info.loc[tids]
   docs = talks.apply(get_talk_doc, axis=1)
@@ -102,23 +91,15 @@ def save_lda_model_data():
   with open(LDA_MODEL_FN, 'wb') as f:
     pickle.dump( (token_mapper, lda), f)
 
-def load_lda_topics_data():
-  with open(LDA_TOPICS_FN) as f:
-    TK_topics, TP_info = pickle.load(f)
-  return TK_topics, TP_info
-
-def load_lda_model_data():
-  with open(LDA_MODEL_FN) as f:
-    token_mapper, lda = pickle.load(f)
-  return token_mapper, lda
-
 def get_topic_talks(TK_topics, TK_info):
   talk_df = TK_topics.reset_index()[['tid', 'top_topic1']]
   topic_tids = talk_df.groupby('top_topic1').apply(lambda x: x.tid.tolist())
 
   tmpf = ftPartial(get_topic_all_docs, TK_info = TK_info)
   topic_desc = topic_tids.apply(tmpf)
+  
   topic_df = pd.DataFrame({'tids':topic_tids, 'desc':topic_desc})
+  topic_df.index = ['topic{:02d}'.format(x) for x in range(N_TOTAL_TOPICS)]
   return topic_df
 
 if __name__ == '__main__':
@@ -129,11 +110,3 @@ if __name__ == '__main__':
   save_lda_topics_data()
   save_lda_model_data()
   
-if False:
-  user_text = 'data science technology computer finance economics market'
-  token_mapper, lda = load_lda_model_data()
-  print get_topics_from_text(user_text, token_mapper, lda)
-
-
-
-

@@ -7,6 +7,8 @@ import numpy as np
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import linear_kernel
+import textwrap
+import re
 
 def get_user_fav_ratings():
   rating_cols = ['Beautiful', 'Confusing', 'Courageous', 'Fascinating', \
@@ -42,7 +44,7 @@ def get_user_fav_keywords():
   U_kws = raw_input('\nTopics you are interested in: (say, \'data science, finance\'):  ')
 
   if U_kws == '':
-    U_kws = 'data science, finance'
+    U_kws = 'data science, technology, computer, economics, finance, market, investing'
 
   print U_kws
 
@@ -101,18 +103,31 @@ def rec_for_existing_user(uid, TK_info):
   return new_rtalks
 
 def rec_talks(uid, TK_info, TK_ratings):
-  if uid=='New':
+  if uid.lower() =='n':
     rec_tids = rec_for_new_user(TK_info, TK_ratings)
   else:
     rec_tids = rec_for_existing_user(uid, TK_info)
-  print TK_info.ix[rec_tids, :4]
+
+  LINE_LENGTH = 80
+  for rtid in rec_tids:
+    tt = TK_info.ix[rtid]
+    print '\n====={}: {} (tid={})=====\n{}\n[keywords]\n{}\n[themes]\n{}'.format(\
+      tt.speaker, tt.title, rtid,
+      textwrap.fill(tt.description, LINE_LENGTH), \
+      textwrap.fill(tt.keywords.replace('[','').replace(']',''), LINE_LENGTH),
+      re.sub('\[|\]|u\'|\'|\"|u\"', '', tt.related_themes))
+      #re.sub('\[|\]|u\'|\'|\"|u\"', '', tt.related_themes).split(', '))
 
 if __name__ == '__main__':
   print 'Loading TED data'
   TK_ratings, TK_info = load_talk_data()
+  
+  msg = '\nPlease enter your UserID, or "n" (for a new user), or "Q" (for quit): '
 
-  uid = ['000fe7196ce60cdfa26e1e69364c85ee8aaf8931', 'New'][1]
-  rec_talks(uid, TK_info, TK_ratings)
+  uid = raw_input(msg)
+  while uid.lower() not in ['q', '']:
+    rec_talks(uid, TK_info, TK_ratings)
+    uid = raw_input(msg)
 
 
 

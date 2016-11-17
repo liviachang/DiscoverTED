@@ -6,8 +6,6 @@ from sklearn.decomposition import NMF
 import cPickle as pickle
 from scipy.stats import rankdata
 from functools import partial as ftPartial
-from time import time
-from datetime import datetime
 import os
 
 def build_nmf(k, R):
@@ -213,61 +211,6 @@ def get_user_rec_talks(U_fratings, U_rtopics, TP_talks, TK_ratings):
 
   return U_rtalks
   
-def print_time(msg, t1=None):
-  t2 = time()
-
-  t2_str = datetime.fromtimestamp(t2).strftime('%Y/%m/%d %H:%M:%S')
-  if t1 is None:
-    print '{}: {}'.format(t2_str, msg)
-  else:
-    print '{}: {} <== {:.0f} secs'.format(t2_str, msg, t2-t1)
-  return t2
-
-def load_talk_data(fn=TALK_DATA_FN):
-  t1 = print_time('Loading talk data')
-
-  tdf = pd.read_csv(fn)
-  
-  ## load talk ratings
-  rating_cols = ['Beautiful', 'Confusing', 'Courageous', 'Fascinating', \
-    'Funny','Informative', 'Ingenious', 'Inspiring', 'Jaw-dropping', \
-    'Longwinded', 'OK', 'Obnoxious', 'Persuasive', 'Unconvincing']
-  TK_ratings = tdf.copy()
-  TK_ratings.tid = TK_ratings.tid.astype(str)
-  TK_ratings = TK_ratings.set_index('tid')
-  TK_ratings = TK_ratings.ix[:,rating_cols]
-
-  ## load talk info
-  info_cols = ['speaker', 'title', 'ted_event', 'description', 'keywords', 'related_themes']
-  TK_info = tdf.copy()
-  TK_info.tid = TK_info.tid.astype(str)
-  TK_info = TK_info.set_index('tid')
-  TK_info = TK_info.ix[:, info_cols]
-  
-  t2 = print_time('Loading talk data', t1)
-
-  return TK_ratings, TK_info
-
-def load_user_data(user_fn=USER_TALK_FN, rating_fn=RATING_MATRIX_FN):
-  t1 = print_time('Loading user data')
-
-  ## load the dataframe with each row as user-ftalk
-  user_ftalk_df = pd.read_csv(user_fn)
-  user_ftalk_df.tid = user_ftalk_df.tid.astype(int).astype(str)
-  
-  ## load the 0-1 matrix with rows=users and columns=talks
-  ratings_mat = pd.read_csv(rating_fn)
-  ratings_mat = ratings_mat.set_index('uid_idiap')
-  
-  t2 = print_time('Loading user data', t1)
-
-  return user_ftalk_df, ratings_mat
-
-def load_ted_data():
-  TK_ratings, TK_info = load_talk_data()
-  U_ftalks, R_mat = load_user_data()
-
-  return TK_ratings, TK_info, U_ftalks, R_mat
 
 def save_model_for_new_user(V, G_rtopics):
   print 'Saving (V, G_rtopics)'

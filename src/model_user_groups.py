@@ -1,6 +1,7 @@
 from src.utils import *
 
-def get_user_topic_scores(R_mat, TK_topics): ## the higher the score, the more the user likes
+def get_user_topic_scores(R_mat, TK_topics): 
+  ## the higher the score, the more the user likes
   TP_mat = TK_topics.ix[:,:N_TOTAL_TOPICS]
   user_topic_scores = R_mat.dot(TP_mat)
   return user_topic_scores

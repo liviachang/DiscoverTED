@@ -96,9 +96,9 @@ def get_group_rtopics_per_group(target_user_gtopics, G_users, U_ranks, n_rtopics
   rec_topics = sorted(rec_topics_all[:n_rtopics])
   return rec_topics
   
-def save_group_data(G_rtopics):
+def save_group_data(G_rtopics, U_tscores, U_ftalks):
   with open(GROUP_DATA_FN, 'wb') as f:
-    pickle.dump( (G_rtopics), f)
+    pickle.dump( (G_rtopics, U_tscores, U_ftalks), f)
 
 if __name__ == '__main__':
   print '# topics = {}, # fav topics for groups = {}, # rec topics = {}'.format(\
@@ -128,7 +128,7 @@ if __name__ == '__main__':
   ## for each user, find recommended topics
   U_rtopics = get_user_rtopics(U_gtopics, G_rtopics)
 
-  save_group_data(G_rtopics)
+  save_group_data(G_rtopics, U_tscores, U_ftalks)
 
 #def build_nmf(k, R):
 #  t1 = print_time('Building NMF models with k={}'.format(k))

@@ -1,19 +1,11 @@
 from src.utils import *
 from src.model_talk_topics import tokenize_talk_doc, get_topics_from_tf, get_topic_score_names
 
-def get_existing_user_fav_ratings(udf, tdf):
-  t1 = print_time('Getting ratings for users\' favorite talks')
+token_mapper, lda_mdl = load_lda_model_data()
+TK_topics, TP_info = load_lda_topics_data()
+G_rtopics, U_tscores, U_ftalks = load_group_data()
+TK_ratings, TK_info = load_talk_data()
 
-  U_ftalks = udf[['uid_idiap', 'tid']].groupby('uid_idiap').tid.apply(list)
-  U_ftalks = U_ftalks.to_dict()
-
-  U_fratings = {}
-  for (uid, tids) in U_ftalks.iteritems():
-    U_fratings[uid] = tdf.ix[tids]
-  
-  t2 = print_time('Getting ratings for users\' favorite talks', t1)
-  
-  return U_fratings
 
 def get_new_user_fav_ratings():
   input_rtyp_idx = get_user_rating_types()
@@ -95,52 +87,52 @@ def get_user_topic_keywords():
 #  gtopics = cos_sim.argsort()[::-1][:n_topics]
 #  return gtopics
 
-def get_topics_from_text(text, id2word, mdl):
+def get_topics_from_text(text):
   tknizer = RegexpTokenizer(r'\w+')
   stop_wds = get_stop_words('en')
   pstemmer = PorterStemmer()
   new_tokens = tokenize_talk_doc(text, tknizer, stop_wds, pstemmer)
 
-  new_tf = id2word.doc2bow(new_tokens)
-  topics = get_topics_from_tf(new_tf, mdl)
+  new_tf = token_mapper.doc2bow(new_tokens)
+  topics = get_topics_from_tf(new_tf, lda_mdl)
   result = pd.Series(topics, index=get_topic_score_names())
   return result
 
 
-def rec_for_new_user():
+
+def get_new_user_tscores_fratings():
 
   ## get user input text and rating preference
   user_text = get_user_topic_keywords()
-  new_fratings = get_new_user_fav_ratings()
+  user_fratings = get_new_user_fav_ratings()
   
-  token_mapper, lda = load_lda_model_data()
-  TK_topics, TP_info = load_lda_topics_data()
-  G_rtopics = load_group_data()
+  ## convert the user input text to topic scores
+  user_tscores = get_topics_from_text(user_text)
 
-  new_tscores = get_topics_from_text(user_text, token_mapper, lda)
-  gtopics = str(sorted(map(int, new_tscores[N_TOTAL_TOPICS:])))
-  rtopics = G_rtopics[gtopics]
-  rtopics_talks = TP_info.ix[rtopics, 'tids'].tolist() ## stop here
+  return user_tscores, user_fratings
 
-  ##===
-  
-#  with open(BROADER_MODEL_NEW_USERS_FN) as f:
-#    V, G_rtopics = pickle.load(f)
-#  TP_talks = get_topic_talks(V, N_TALK_CANDIDATES)
-#
-#  TP_docs, TP_vec, TP_tfidf, TP_vocabs, TP_kws = vectorize_topics(V, TK_info)
-#  new_gtopics = get_user_gtopics_from_keywords(new_kws, TP_vec, TP_tfidf)
-#  new_gtopics = str( sorted(new_gtopics) )
-#  new_rtopics = G_rtopics[new_gtopics]
-#  new_rtopics_talks = TP_talks[new_rtopics]
-#  new_rtalks = get_user_rec_talks_per_user( new_fratings, new_rtopics_talks, TK_ratings)
-#  return new_rtalks
+def get_user_rec_talks(tscores, user_fratings):
 
-def get_user_rec_talks_per_user(fratings, rtopics_talks, TK_ratings):
+  gtopics_list = map(int, tscores[N_TOTAL_TOPICS:])
+  gtopics_key = str(sorted(map(int, tscores[N_TOTAL_TOPICS:])))
+
+  ## for topics to go deeper (topics already liked)
+  deeper_rtopics = ['topic{:02d}'.format(x) for x in gtopics_list]
+  deeper_candidates = TP_info.ix[deeper_rtopics, 'tids'].tolist()
+  deeper_rtalks = get_rtalks_from_ratings(user_fratings, deeper_candidates)
+
+  ## for topics to go broader (topics new to the user)
+  broader_rtopics = G_rtopics[gtopics_key]
+  broader_candidates = TP_info.ix[broader_rtopics, 'tids'].tolist()
+  broader_rtalks = get_rtalks_from_ratings(user_fratings, broader_candidates)
+
+  return deeper_rtalks + broader_rtalks
+ 
+def get_rtalks_from_ratings(user_ratings, candidates):
   rtalks = []
-  for rtt in rtopics_talks:
+  for rtt in candidates:
     tratings = TK_ratings.ix[rtt,:]
-    rtalks.append( get_closest_rtalk(tratings, fratings) )
+    rtalks.append( get_closest_rtalk(tratings, user_ratings) )
   return rtalks
 
 def get_closest_rtalk(talk_ratings, fav_ratings, OPTION=['MEAN_DIST', 'MIN_DIST'][1]):
@@ -157,43 +149,56 @@ def get_closest_rtalk(talk_ratings, fav_ratings, OPTION=['MEAN_DIST', 'MIN_DIST'
   return rtalk
 
 
-def rec_for_existing_user(uid, TK_info):
+def get_existing_user_tscores_fratings(uid):
+  user_tscores = U_tscores.ix[uid,:]
 
-  #U_fratings = get_existing_user_fav_ratings(U_ftalks, TK_ratings)
-  #U_rtalks = get_user_rec_talks(U_fratings, U_rtopics, TP_talks, TK_ratings)
+  ##FIXME: should move to model_user_groups.py
+  top_topics = user_tscores.argsort()[::-1][:N_GROUP_TOPICS] 
+  for idx in xrange(N_GROUP_TOPICS):
+    user_tscores['top_topic{}'.format(idx+1)] = top_topics[idx]
   
-  with open(BROADER_MODEL_EXISTING_USERS_FN) as f:
-    U_rtalks = pickle.load(f)
-  new_rtalks = U_rtalks[uid]
-  return new_rtalks
+  tids = U_ftalks.ix[U_ftalks.uid_idiap==uid, 'tid']
+  user_fratings = TK_ratings.ix[tids]
 
-def rec_talks(uid, TK_info, TK_ratings):
+  return user_tscores, user_fratings
+
+
+def rec_talks(uid):
   if uid.lower() =='n':
-    rec_tids = rec_for_new_user(TK_info, TK_ratings)
+    tscores, fratings = get_new_user_tscores_fratings()
   else:
-    rec_tids = rec_for_existing_user(uid, TK_info)
+    if uid.lower() == 'e':
+      uid = random.choice( U_tscores.index )
+    tscores, fratings = get_existing_user_tscores_fratings(uid)
 
+  rec_tids = get_user_rec_talks(tscores, fratings)
+  print_rtalks(rec_tids)
+
+
+def print_rtalks(rec_tids):
   LINE_LENGTH = 80
+
   for rtid in rec_tids:
     tt = TK_info.ix[rtid]
-    print '\n====={}: {} (tid={})=====\n{}\n[keywords]\n{}\n[themes]\n{}'.format(\
-      tt.speaker, tt.title, rtid,
-      textwrap.fill(tt.description, LINE_LENGTH), \
-      textwrap.fill(tt.keywords.replace('[','').replace(']',''), LINE_LENGTH),
-      re.sub('\[|\]|u\'|\'|\"|u\"', '', tt.related_themes))
-      #re.sub('\[|\]|u\'|\'|\"|u\"', '', tt.related_themes).split(', '))
 
-#if __name__ == '__main__':
-if False:
-  print 'Loading TED data'
+    tthemes = tt.related_themes
+    msg = '\n====={}: {} ({})=====\n{}\n[keywords]\n{}'.format(\
+        tt.speaker, tt.title, tt.ted_event, #rtid,
+        textwrap.fill(tt.description, LINE_LENGTH), \
+        textwrap.fill(tt.keywords.replace('[','').replace(']',''), LINE_LENGTH))
+    if not isinstance(tthemes, float):
+      msg = '{}\n[themes]\n{}'.format(msg, 
+        re.sub('\[|\]|u\'|\'|\"|u\"', '', tthemes))
 
-  #TK_ratings, TK_info = load_talk_data()
+    print msg
+
   
+if __name__ == '__main__':
   msg = '\nPlease enter your UserID, or "n" (for a new user), or "q" (for quit): '
 
   uid = raw_input(msg)
   while uid.lower() not in ['q', '']:
-    rec_talks(uid, TK_info, TK_ratings)
+    rec_talks(uid)
     uid = raw_input(msg)
 
 

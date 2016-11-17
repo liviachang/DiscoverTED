@@ -16,6 +16,7 @@ import cPickle as pickle
 import numpy as np
 import os
 import pandas as pd
+import random
 import re
 import textwrap
 
@@ -106,5 +107,5 @@ def load_lda_model_data():
 
 def load_group_data():
   with open(GROUP_DATA_FN) as f:
-    G_rtopics = pickle.load(f)
-  return G_rtopics
+    G_rtopics, U_tscores, U_ftalks = pickle.load(f)
+  return G_rtopics, U_tscores, U_ftalks

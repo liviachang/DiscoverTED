@@ -1,7 +1,8 @@
-# HappyLearning: A TED Talk Recommender You Haven't Liked
+# HappyLearning: A TED Talk Recommender to Learn Deeper and Wider
 
-This capstone project is to build a TED talk recommender for people to learn
-new topics.
+This is a 2-week capstone project for my Galvanize Data Science Immersive program. 
+The goal is to build a TED talk recommender for people to learn deeper and
+wider topics. 
 
 While I am trying to be an expert in data science, I would also like to keep an
 eye on the world. Learning some new topics stimulate my thoughts and adds
@@ -9,14 +10,20 @@ diversity to my life! TED.com is one of my favorite resources to learn. Thus, I
 would like to build the TED recommender that helps me explore new topics that I
 will potentially like.
 
-## Proposed Process Flow
+[TODO] Add Demo Screenshot
+
+## Methodology
 - Exploratory data analysis (EDA)
-- Matrix Factorization to find peers for a given user
-- Analyze peers' latent features to find one ***potential new topic*** a user may like mostly
-- Analyze the potential new topic to find ***potential talks*** to recommend
+- Topic Modeling: find users' peers based on same top "d" topics (latent features), 
+  and find talks' topics
+    - Non-Negative Matrix Factorization (NMF)
+    - Natural language processing (NLP) + Latent Dirichlet Allocation (LDA)
+- Define ***deeper topics*** as the top "d" topics, and define ***wider topics*** as
+  the next top "w" topics based on peers' latent features
 - The final recommended talk is the talk with the ratings (say, x% informative + 
   y% Funny + z% Inspiring) most similar to those of a user's favorites talk. 
 
+## Evaluation
 
 ## Data
 The data is mainly sourced from [Idiap TED dataset](https://www.idiap.ch/dataset/ted) 

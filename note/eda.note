@@ -1,59 +1,20 @@
 
---- N_GROUP_TOPICS=2, N_REC_TOPICS=3
-2016/11/17 21:49:25: Loading talk data
-My recommender: deeper 0.314142, wider 0.464162, total 0.778304
-Benchmark: deeper 0.305456, wider 0.464341, total 0.769797
-outputform: score 0.0085, freq 0.546667, pvalue 0.053337
+--- python src/recommend_talks.py EVALUATE (n_wider=2, n_keeper=2)
+LDA
+2016/11/18 14:12:34: 
+Evaluation Results for model LDA
+My recommender: deeper 0.381865, wider 0.395333, total 0.777198
+Benchmark: deeper 0.360840, wider 0.355900, total 0.716740
+outputform: score 0.0605, freq 0.679333, pvalue 0.000000
+NMF
+2016/11/18 14:15:26: 
+Evaluation Results for model NMF
+My recommender: deeper 0.478411, wider 0.285879, total 0.764290
+Benchmark: deeper 0.538399, wider 0.343283, total 0.881681
+outputform: score -0.1174, freq 0.325333, pvalue 0.000000
 
-
---- python src/clean_data.py
-Transforming user data from merged talk data and idiap user data
-python srdf_train=(101284, 5), rdf_test=(28273, 5)
-Save transformed user data into rating matrix
-rc/model_talk_topics.pySave transformed user data into rating matrix
-
-
---- python src/model_talk_topics.py
-2016/11/17 21:56:57: Loading talk data
 
 --- python src/model_user_groups.py; python src/recommend_talks.py
-# topics = 10, # fav topics for groups = 2, # rec topics = 2
-2016/11/17 22:05:32: Loading talk data
-2016/11/17 22:05:32: Loading user data
-2016/11/17 22:05:36: Getting users' top 2 topics as group topics
-U_gtopics: #user = 10901, # gtopics = 2
-
-2016/11/17 22:05:40: Getting groups' users based on gtopics
-# grps=51, # total users=10901, (min, max) grp size=(1, 1020)
-
-2016/11/17 22:05:40: Getting groups' 2 recommended topics
-# grps=56, # rec topics=2
-
-2016/11/17 22:05:40: Getting users' recommended topics
-
-2016/11/17 22:05:44: Loading talk data
-My recommender: deeper 0.283569, wider 0.299932, total 0.583501
-Benchmark: deeper 0.254572, wider 0.274525, total 0.529096
-outputform: score 0.0544, freq 0.620667, pvalue 0.000000
-
---- python src/model_user_groups.py; python src/recommend_talks.py
-# topics = 10, # fav topics for groups = 2, # rec topics = 3
-2016/11/17 22:08:05: Loading talk data
-2016/11/17 22:08:05: Loading user data
-2016/11/17 22:08:08: Getting users' top 2 topics as group topics
-U_gtopics: #user = 10901, # gtopics = 2
-
-2016/11/17 22:08:13: Getting groups' users based on gtopics
-# grps=51, # total users=10901, (min, max) grp size=(1, 1020)
-
-2016/11/17 22:08:13: Getting groups' 3 recommended topics
-# grps=56, # rec topics=3
-
-2016/11/17 22:08:13: Getting users' recommended topics
-2016/11/17 22:08:17: Loading talk data
-My recommender: deeper 0.283569, wider 0.420902, total 0.704471
-Benchmark: deeper 0.254572, wider 0.400232, total 0.654804
-outputform: score 0.0497, freq 0.655333, pvalue 0.000000
 
 --- rec "Informative, Inspiring" + "internet technology data computer investment finance economics"
 =====Bill Gross: The single biggest reason why startups succeed (TED2015)=====

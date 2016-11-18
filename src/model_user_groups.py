@@ -31,7 +31,7 @@ def get_topic_rankings_per_user(x):
   return ranks
 
 def get_user_gtopics_per_user(x, n_gtopics):
-  top_topics = sorted(np.where(x.values<=n_gtopics)[0])
+  top_topics = sorted(np.where(x.values<=n_gtopics)[0])[:n_gtopics]
   return str(top_topics)
 
 def get_group_users(U_gtopics):
@@ -99,101 +99,49 @@ def get_group_rtopics_per_group(target_user_gtopics, G_users, U_ranks, n_rtopics
   rec_topics = sorted(rec_topics_all[:n_rtopics])
   return rec_topics
   
-def save_group_data(G_rtopics, U_tscores, U_ftalks):
-  with open(GROUP_DATA_FN, 'wb') as f:
-    pickle.dump( (G_rtopics, U_tscores, U_ftalks), f)
+def save_group_data(G_rtopics, U_tscores, mdl_name):
+  print_time('Saving group data from {}'.format(mdl_name))
+
+  if mdl_name == 'LDA':
+    output_fn = LDA_GROUP_DATA_FN
+  elif mdl_name == 'NMF':
+    output_fn = NMF_GROUP_DATA_FN
+
+  with open(output_fn, 'wb') as f:
+    pickle.dump( (G_rtopics, U_tscores), f)
 
 if __name__ == '__main__':
   print '# topics = {}, # fav topics for groups = {}, # rec topics = {}'.format(\
     N_TOTAL_TOPICS, N_GROUP_TOPICS, N_REC_TOPICS)
 
   TK_ratings, TK_info, U_ftalks, R_mat = load_ted_data()
-  TK_topics_all, TP_info = load_LDA_topics_data()
-  TK_topics = TK_topics_all.loc[map(str, R_mat.columns)]
 
-  ## get user-topic score matrix from user-talk matrix
-  U_tscores = get_user_topic_scores(R_mat, TK_topics)
+  for MODEL in MODEL_NAMES:
+    print_time('Model user groups via {}'.format(MODEL))
 
-  ## get user-topic ranking dataframe from user-topi ranking scores
-  ## get user->group dict from user-topic score matrix
-  ## for each user, find his/her group
-  U_ranks, U_gtopics = get_user_gtopics(U_tscores, N_GROUP_TOPICS)
+    TK_topics, TP_info = load_topics_data(mdl_name=MODEL)
+    if MODEL == 'LDA':
+      TK_topics = TK_topics.loc[map(str, R_mat.columns)]
 
-  ## get group->users dict from user->group dict
-  ## for each group, find all users
-  G_users = get_group_users(U_gtopics)
+    ## get user-topic score matrix from user-talk matrix
+    U_tscores = get_user_topic_scores(R_mat, TK_topics)
 
-  ## get group->rtopics dict
-  ## for each group, find recommended topics
-  G_rtopics = get_group_rtopics(G_users, U_ranks, N_REC_TOPICS)
+    ## get user-topic ranking dataframe from user-topi ranking scores
+    ## get user->group dict from user-topic score matrix
+    ## for each user, find his/her group
+    U_ranks, U_gtopics = get_user_gtopics(U_tscores, N_GROUP_TOPICS)
 
-  ## get user->topics dict
-  ## for each user, find recommended topics
-  U_rtopics = get_user_rtopics(U_gtopics, G_rtopics)
+    ## get group->users dict from user->group dict
+    ## for each group, find all users
+    G_users = get_group_users(U_gtopics)
 
-  save_group_data(G_rtopics, U_tscores, U_ftalks)
+    ## get group->rtopics dict
+    ## for each group, find recommended topics
+    G_rtopics = get_group_rtopics(G_users, U_ranks, N_REC_TOPICS)
 
-#def build_nmf(k, R):
-#  t1 = print_time('Building NMF models with k={}'.format(k))
-#
-#  ## get NMF R = U x V
-#  ## U.shape = n_users x k_topics
-#  ## V.shape = k_topics x m_talks
-#  nmf = NMF(n_components = k, random_state=319).fit(R.values)
-#  U = pd.DataFrame(nmf.transform(R.values), index=R.index)
-#  V = pd.DataFrame(nmf.components_, columns=R.columns)
-#  #E = nmf.reconstruction_err_
-#
-#  t2 = print_time('Building NMF models with k={}'.format(k), t1)
-#  print 'U.shape={}, V.shape={}\n'.format(U.shape, V.shape)
-#  
-#  return U, V
-#
-#def get_topic_talks_per_topic(talk_scores, n_talks):
-#  top_idx = np.argsort(talk_scores)[::-1][:n_talks]
-#  return top_idx
-#
-#
-###FIXME, currently program doesn't take utils
-#def get_topic_talks(V, n_talks=5):#N_TALK_CANDIDATES): 
-#  t1 = print_time('Getting topics\' top {} talks'.format(n_talks))
-#
-#  tmpf = ftPartial(get_topic_talks_per_topic, n_talks=n_talks)
-#  top_talks_idx = V.apply(tmpf, axis=1)
-#  top_talk_ids = V.columns[ top_talks_idx.values ]
-#
-#  t2 = print_time('Getting topics\' top {} talks'.format(n_talks), t1)
-#
-#  return top_talk_ids
-#
-#def get_user_rec_talks(U_fratings, U_rtopics, TP_talks, TK_ratings):
-#
-#  t1 = print_time('Getting users\' recommended talks')
-#
-#  U_rtalks = {}
-#
-#  for (uid, fratings) in U_fratings.iteritems():
-#    rtopics = U_rtopics[uid]
-#    rtopics_talks = TP_talks[rtopics]
-#    U_rtalks[uid] = get_user_rec_talks_per_user( fratings, rtopics_talks, TK_ratings)
-#  
-#  t2 = print_time('Getting users\' recommended talks', t1)
-#
-#  return U_rtalks
-#  
-#
-#def save_model_for_new_user(V, G_rtopics):
-#  print 'Saving (V, G_rtopics)'
-#  with open(BROADER_MODEL_NEW_USERS_FN, 'wb') as f:
-#    pickle.dump((V, G_rtopics), f)
-#
-#def save_model_for_existing_users(U_rtalks):
-#  print 'Saving (U_rtalks)'
-#  with open(BROADER_MODEL_EXISTING_USERS_FN, 'wb') as f:
-#    pickle.dump(U_rtalks, f)
-#
-#if False:
-#
-#  save_model_for_new_user(V, G_rtopics)
-#  save_model_for_existing_users(U_rtalks)
-#
+    ## get user->topics dict
+    ## for each user, find recommended topics
+    U_rtopics = get_user_rtopics(U_gtopics, G_rtopics)
+
+    save_group_data(G_rtopics, U_tscores, mdl_name=MODEL)
+

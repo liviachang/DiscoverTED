@@ -2,10 +2,16 @@ from src.utils import *
 from src.model_talk_topics import get_talk_doc, tokenize_talk_doc
 from src.model_talk_topics import get_topics_from_tf, get_topic_score_names
 
+TK_ratings, TK_info, U_ftalks, R_mat = load_ted_data()
+
+TK_topics_LDA, TP_info_LDA = load_topics_data(mdl_name='LDA')
+G_rtopics_LDA, U_tscores_LDA = load_group_data(mdl_name='LDA')
 token_mapper, mdl_LDA = load_LDA_model_data()
-TK_topics_LDA, TP_info_LDA = load_LDA_topics_data()
-G_rtopics, U_tscores, U_ftalks = load_group_data()
-TK_ratings, TK_info = load_talk_data()
+
+TK_topics_NMF, TP_info_NMF = load_topics_data(mdl_name='NMF')
+G_rtopics_NMF, U_tscores_NMF = load_group_data(mdl_name='NMF')
+U_NMF, V_NMF, tfidf_vec, TP_tfidf = load_NMF_model_data()
+
 
 def get_new_user_fav_ratings():
   input_rtyp_idx = get_user_rating_types()
@@ -57,25 +63,35 @@ def get_user_topic_keywords():
 
   return user_text
 
-def get_topics_from_text_LDA(text):
+def get_topics_from_text(text, mdl_name=MODEL_NAMES[0]):
   tknizer = RegexpTokenizer(r'\w+')
   stop_wds = get_stop_words('en')
   pstemmer = PorterStemmer()
   new_tokens = tokenize_talk_doc(text, tknizer, stop_wds, pstemmer)
 
-  new_tf = token_mapper.doc2bow(new_tokens)
-  topics = get_topics_from_tf(new_tf, mdl_LDA)
-  result = pd.Series(topics, index=get_topic_score_names())
+  if mdl_name == 'LDA':
+    new_tf = token_mapper.doc2bow(new_tokens)
+    topics = get_topics_from_tf(new_tf, mdl_LDA)
+    result = pd.Series(topics, index=get_topic_score_names())
+
+  elif mdl_name == 'NMF':
+    tfidf_vec = TfidfVectorizer(stop_words='english')
+    TP_tfidf = tfidf_vec.fit_transform(TP_info['desc'].values)
+    new_tfidf = tfidf_vec.transform([' '.join(new_tokens)])
+    cos_sim = linear_kernel(new_tfidf, TP_tfidf)[0]
+    gtopics = cos_sim.argsort()[::-1][:N_GROUP_TOPICS]
+    result = pd.Series(np.concatenate([cos_sim, gtopics]), index=get_topic_score_names())
+
   return result
 
-def get_new_user_tscores_fratings():
+def get_new_user_tscores_fratings(mdl_name):
 
   ## get user input text and rating preference
   user_text = get_user_topic_keywords()
   user_fratings = get_new_user_fav_ratings()
   
   ## convert the user input text to topic scores
-  user_tscores = get_topics_from_text_LDA(user_text)
+  user_tscores = get_topics_from_text(user_text, mdl_name=mdl_name)
 
   return user_tscores, user_fratings
 
@@ -86,12 +102,12 @@ def get_user_rec_talks(tscores, user_fratings):
 
   ## for topics to go deeper (topics already liked)
   deeper_rtopics = ['topic{:02d}'.format(x) for x in gtopics_list]
-  deeper_candidates = TP_info_LDA.ix[deeper_rtopics, 'tids'].tolist()
+  deeper_candidates = TP_info.ix[deeper_rtopics, 'tids'].tolist()
   deeper_rtalks = get_rtalks_from_ratings(user_fratings, deeper_candidates)
 
   ## for topics to go wider (topics new to the user)
   wider_rtopics = G_rtopics[gtopics_key]
-  wider_candidates = TP_info_LDA.ix[wider_rtopics, 'tids'].tolist()
+  wider_candidates = TP_info.ix[wider_rtopics, 'tids'].tolist()
   wider_rtalks = get_rtalks_from_ratings(user_fratings, wider_candidates)
 
   return deeper_rtalks + wider_rtalks, deeper_rtopics + wider_rtopics
@@ -131,9 +147,9 @@ def get_existing_user_tscores_fratings(uid):
   return user_tscores, user_fratings
 
 
-def rec_talks(uid):
+def rec_talks(uid, mdl_name):
   if uid.lower() =='n':
-    tscores, fratings = get_new_user_tscores_fratings()
+    tscores, fratings = get_new_user_tscores_fratings(mdl_name)
   else:
     if uid.lower() == 'e':
       uid = random.choice( U_tscores.index )
@@ -166,10 +182,19 @@ def evaluate_tids():
   #uids = np.random.choice(uids.index, size=100)
   return uids
 
-def get_success_metrics(test_udf):
-  np.random.seed(319)
-  talks_per_topic_LDA = TK_topics_LDA['top_topic1'].value_counts()
-  talks_per_topic_LDA = talks_per_topic_LDA.sort_index() / sum(talks_per_topic_LDA)
+def get_success_metrics(test_udf, mdl_name):
+  print mdl_name
+  global G_rtopics, U_tscores, TK_topics, TP_info
+
+  if mdl_name == 'LDA':
+    G_rtopics, U_tscores, TK_topics, TP_info = \
+      G_rtopics_LDA, U_tscores_LDA, TK_topics_LDA, TP_info_LDA
+  elif mdl_name == 'NMF':
+    G_rtopics, U_tscores, TK_topics, TP_info = \
+      G_rtopics_NMF, U_tscores_NMF, TK_topics_NMF, TP_info_NMF
+
+  talks_per_topic = TK_topics['top_topic1'].value_counts()
+  talks_per_topic = talks_per_topic.sort_index() / sum(talks_per_topic)
 
   deeper_scores, wider_scores, deeper_bmk, wider_bmk = [], [], [], []
 
@@ -179,23 +204,22 @@ def get_success_metrics(test_udf):
     tids_truth = tids[~tids.isin(tids_input)]
     #print 'uid={}, tids_input={}'.format(uid, tids_input)
 
-    ## stop here program can't run get_talk_doc()
     user_text = TK_info.ix[tids_input].apply(get_talk_doc, axis=1).tolist()
     user_text = reduce(lambda x, y: x+y, user_text)
     user_text = user_text.replace('[', '').replace(']', '')
-    user_tscores = get_topics_from_text_LDA(user_text)
+    user_tscores = get_topics_from_text(user_text, mdl_name=mdl_name)
 
     user_fratings = TK_ratings.ix[tids_input]
 
     rec_tids, topics_rec = get_user_rec_talks(user_tscores, user_fratings)
-    topics_input = TK_topics_LDA.ix[tids_input, 'top_topic1']
-    topics_truth = TK_topics_LDA.ix[tids_truth, 'top_topic1']
+    topics_input = TK_topics.ix[map(str, tids_input), 'top_topic1']
+    topics_truth = TK_topics.ix[map(str, tids_truth), 'top_topic1']
 
     topics_rec_num = [float(x.replace('topic0', '')) for x in topics_rec]
     deeper_scores.append(np.mean(topics_truth.isin(topics_rec_num[:N_GROUP_TOPICS]) ))
     wider_scores.append(np.mean(topics_truth.isin(topics_rec_num[N_GROUP_TOPICS:]) ))
-    deeper_bmk.append(sum( talks_per_topic_LDA[topics_rec_num[:N_GROUP_TOPICS]] ))
-    wider_bmk.append(sum( talks_per_topic_LDA[topics_rec_num[N_GROUP_TOPICS:]] ))
+    deeper_bmk.append(sum( talks_per_topic[topics_rec_num[:N_GROUP_TOPICS]] ))
+    wider_bmk.append(sum( talks_per_topic[topics_rec_num[N_GROUP_TOPICS:]] ))
   
   return np.array(deeper_scores), np.array(wider_scores), \
     np.array(deeper_bmk), np.array(wider_bmk)
@@ -205,22 +229,21 @@ def evaluate_recommender():
   #uids = evaluate_tids()
   test_udf = pd.read_csv(TEST_USER_TALK_FN)
   test_udf['tid'] = test_udf['tid'].astype(int)
-    
-  deeper_scores, wider_scores, deeper_bmk, wider_bmk = get_success_metrics(test_udf)
-  rec_scores = deeper_scores + wider_scores
-  bmk_scores = deeper_bmk + wider_bmk
-  outperform_scores = (rec_scores - bmk_scores)
+  
+  for mdl in MODEL_NAMES:
+    deeper_scores, wider_scores, deeper_bmk, wider_bmk = get_success_metrics(test_udf, mdl_name=mdl)
+    rec_scores = deeper_scores + wider_scores
+    bmk_scores = deeper_bmk + wider_bmk
+    outperform_scores = (rec_scores - bmk_scores)
 
-  print 'My recommender: deeper {:4f}, wider {:4f}, total {:4f}'.format(\
-    np.mean(deeper_scores), np.mean(wider_scores), np.mean(rec_scores))
-  print 'Benchmark: deeper {:4f}, wider {:4f}, total {:4f}'.format(\
-    np.mean(deeper_bmk), np.mean(wider_bmk), np.mean(bmk_scores))
-  print 'outputform: score {:.4f}, freq {:4f}, pvalue {:4f}'.format(\
-    np.mean(outperform_scores), np.mean(outperform_scores>0),
-    ttest_1samp(outperform_scores, 0).pvalue)
-
-  return deeper_scores, wider_scores, deeper_bmk, wider_bmk, outperform_scores
-
+    t1 = print_time('\nEvaluation Results for model {}'.format(mdl))
+    print 'My recommender: deeper {:4f}, wider {:4f}, total {:4f}'.format(\
+      np.mean(deeper_scores), np.mean(wider_scores), np.mean(rec_scores))
+    print 'Benchmark: deeper {:4f}, wider {:4f}, total {:4f}'.format(\
+      np.mean(deeper_bmk), np.mean(wider_bmk), np.mean(bmk_scores))
+    print 'outputform: score {:.4f}, freq {:4f}, pvalue {:4f}'.format(\
+      np.mean(outperform_scores), np.mean(outperform_scores>0),
+      ttest_1samp(outperform_scores, 0).pvalue)
   
 if __name__ == '__main__':
   if len(sys.argv) > 1:
@@ -231,9 +254,19 @@ if __name__ == '__main__':
   if MODE == 'RECOMMEND':
     msg = '\nPlease enter your UserID, or "n" (for a new user), or "q" (for quit): '
 
+    MODEL = MODEL_NAMES[1]
+    print 'Evaluation is based on model {}'.format(MODEL)
+
+    if MODEL == 'LDA':
+      G_rtopics, U_tscores, TK_topics, TP_info = \
+        G_rtopics_LDA, U_tscores_LDA, TK_topics_LDA, TP_info_LDA
+    elif MODEL == 'NMF':
+      G_rtopics, U_tscores, TK_topics, TP_info = \
+        G_rtopics_NMF, U_tscores_NMF, TK_topics_NMF, TP_info_NMF
+
     uid = raw_input(msg)
     while uid.lower() not in ['q', '']:
-      rec_talks(uid)
+      rec_talks(uid, MODEL)
       uid = raw_input(msg)
   else:
     evaluate_recommender()

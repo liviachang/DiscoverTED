@@ -34,7 +34,11 @@ USER_DATA_IDIAP_FN = '/Users/liviachang/TED/idiap/ted_users-10-Sep-2012.json'
 
 LDA_MODEL_FN = '/Users/liviachang/Galvanize/capstone/model/model_lda.pkl'
 LDA_TOPICS_FN = '/Users/liviachang/Galvanize/capstone/model/data_lda_topics.pkl'
-GROUP_DATA_FN = '/Users/liviachang/Galvanize/capstone/model/data_user_groups.pkl'
+LDA_GROUP_DATA_FN = '/Users/liviachang/Galvanize/capstone/model/data_lda_user_groups.pkl'
+
+NMF_MODEL_FN = '/Users/liviachang/Galvanize/capstone/model/model_nmf.pkl'
+NMF_TOPICS_FN = '/Users/liviachang/Galvanize/capstone/model/data_nmf_topics.pkl'
+NMF_GROUP_DATA_FN = '/Users/liviachang/Galvanize/capstone/model/data_nmf_user_groups.pkl'
 
 RATING_TYPES = ['Beautiful', 'Confusing', 'Courageous', 'Fascinating', \
   'Funny','Informative', 'Ingenious', 'Inspiring', 'Jaw-dropping', \
@@ -48,6 +52,8 @@ N_TALKS_FOR_KWS = 15
 N_TESTING_USERS = 1500
 
 IS_PRINT_TIME = False
+
+MODEL_NAMES = ['LDA', 'NMF']
 
 def print_time(msg, t1=None):
   t2 = time()
@@ -101,17 +107,42 @@ def load_ted_data():
 
   return TK_ratings, TK_info, U_ftalks, R_mat
 
-def load_LDA_topics_data():
-  with open(LDA_TOPICS_FN) as f:
+def load_topics_data(mdl_name=MODEL_NAMES[0]):
+  print_time('Loading topic data from {}'.format(mdl_name))
+  if mdl_name == 'LDA':
+    topic_fn = LDA_TOPICS_FN
+  elif mdl_name == 'NMF':
+    topic_fn = NMF_TOPICS_FN
+
+  with open(topic_fn) as f:
     TK_topics, TP_info = pickle.load(f)
   return TK_topics, TP_info
 
-def load_LDA_model_data():
-  with open(LDA_MODEL_FN) as f:
-    token_mapper, LDA = pickle.load(f)
-  return token_mapper, LDA
+def load_group_data(mdl_name=MODEL_NAMES[0]):
+  print_time('Loading group data from {}'.format(mdl_name))
+  if mdl_name == 'LDA':
+    data_fn = LDA_GROUP_DATA_FN
+  elif mdl_name == 'NMF':
+    data_fn = NMF_GROUP_DATA_FN
 
-def load_group_data():
-  with open(GROUP_DATA_FN) as f:
-    G_rtopics, U_tscores, U_ftalks = pickle.load(f)
-  return G_rtopics, U_tscores, U_ftalks
+  with open(data_fn) as f:
+    G_rtopics, U_tscores = pickle.load(f)
+  return G_rtopics, U_tscores
+
+def load_LDA_model_data():
+  print_time('Loading model data from LDA')
+  with open(LDA_MODEL_FN) as f:
+    token_mapper, mdl_LDA = pickle.load(f)
+  return token_mapper, mdl_LDA
+
+def load_NMF_model_data():
+  with open(NMF_MODEL_FN) as f:
+    U_NMF, V_NMF, tfidf_vec, TP_tfidf = pickle.load(f)
+  return U_NMF, V_NMF, tfidf_vec, TP_tfidf
+  
+np.random.seed(0)
+
+#def load_NMF_group_data():
+#  with open(NMF_GROUP_DATA_FN) as f:
+#    G_rtopics, U_tscores, U_ftalks = pickle.load(f)
+#  return G_rtopics, U_tscores, U_ftalks

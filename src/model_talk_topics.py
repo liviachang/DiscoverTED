@@ -53,6 +53,22 @@ def get_topics_from_tf(x, mdl):
     result[N_TOTAL_TOPICS+idx] = top_topics[idx]
   return result
 
+def model_talk_topics_NMF(R):
+  t1 = print_time('Topic modeling via NMF')
+  nmf = NMF(n_components=N_TOTAL_TOPICS, random_state=319).fit(R.values)
+  U = pd.DataFrame(nmf.transform(R.values), index=R.index)
+  V = pd.DataFrame(nmf.components_, columns=R.columns)
+
+  V_normed = V.apply(lambda x: x/sum(x), axis=0)
+  V_normed.index = ['topic{:02d}'.format(x) for x in xrange(V_normed.shape[0])]
+  V_top_topics = V_normed.apply(lambda x: x.argsort()[::-1][:N_GROUP_TOPICS])
+  V_top_topics.index = ['top_topic{}'.format(x+1) for x in xrange(V_top_topics.shape[0])]
+
+  TK_topics = V_normed.append(V_top_topics).transpose()
+  TK_topics.index.name = 'tid'
+
+  return TK_topics, U, V
+
 def model_talk_topics_LDA(TK_info):
   TK_docs = TK_info.apply(get_talk_doc, axis=1)
   TK_tokens = get_talk_tokens(TK_docs)
@@ -72,6 +88,7 @@ def model_talk_topics_LDA(TK_info):
 
   return df, id2word, mdl
 
+
 def get_topic_score_names():
   df_cols = ['topic{:02d}'.format(x) for x in range(N_TOTAL_TOPICS)]
   df_cols = df_cols + ['top_topic1', 'top_topic2']
@@ -85,28 +102,49 @@ def get_topic_all_docs(tids, TK_info):
 
 def save_LDA_topics_data():
   with open(LDA_TOPICS_FN, 'wb') as f:
-    pickle.dump( (TK_topics, TP_info), f)
-  
+    pickle.dump( (TK_topics_LDA, TP_info_LDA), f)
+
 def save_LDA_model_data():
   with open(LDA_MODEL_FN, 'wb') as f:
-    pickle.dump( (token_mapper, LDA), f)
+    pickle.dump( (token_mapper, mdl_LDA), f)
 
+def save_NMF_topics_data():
+  with open(NMF_TOPICS_FN, 'wb') as f:
+    pickle.dump( (TK_topics_NMF, TP_info_NMF), f)
+
+def save_NMF_model_data():
+  with open(NMF_MODEL_FN, 'wb') as f:
+    pickle.dump( (U_NMF, V_NMF, tfidf_vec, TP_tfidf), f)
+  
 def get_topic_talks(TK_topics, TK_info):
   talk_df = TK_topics.reset_index()[['tid', 'top_topic1']]
   topic_tids = talk_df.groupby('top_topic1').apply(lambda x: x.tid.tolist())
 
   tmpf = ftPartial(get_topic_all_docs, TK_info = TK_info)
   topic_desc = topic_tids.apply(tmpf)
+
+  tmpf = ftPartial(tokenize_talk_doc, tokenizer=RegexpTokenizer(r'\w+'), \
+    stop_wds=get_stop_words('en'), stemmer=PorterStemmer())
+  topic_desc = topic_desc.apply(tmpf)
+  topic_desc = topic_desc.apply(lambda x: ' '.join(x))
   
   topic_df = pd.DataFrame({'tids':topic_tids, 'desc':topic_desc})
   topic_df.index = ['topic{:02d}'.format(x) for x in range(N_TOTAL_TOPICS)]
   return topic_df
 
 if __name__ == '__main__':
-  TK_ratings, TK_info = load_talk_data()
-  TK_topics, token_mapper, LDA = model_talk_topics_LDA(TK_info)
-  TP_info = get_topic_talks(TK_topics, TK_info)
+  TK_ratings, TK_info, U_ftalks, R_mat = load_ted_data()
 
+  TK_topics_LDA, token_mapper, mdl_LDA = model_talk_topics_LDA(TK_info)
+  TP_info_LDA = get_topic_talks(TK_topics_LDA, TK_info)
   save_LDA_topics_data()
   save_LDA_model_data()
+
+  TK_topics_NMF, U_NMF, V_NMF = model_talk_topics_NMF(R_mat)
+  TP_info_NMF = get_topic_talks(TK_topics_NMF, TK_info)
+  tfidf_vec = TfidfVectorizer(stop_words='english')
+  TP_tfidf = tfidf_vec.fit_transform(TP_info_NMF['desc'].values)
+
+  save_NMF_topics_data()
+  save_NMF_model_data()
   

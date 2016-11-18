@@ -97,7 +97,6 @@ def transform_user_data(is_split=True):
   rdf = rdf.drop_duplicates(rdf).dropna()
 
   if is_split:
-    np.random.seed(319)
     nftalks_per_user = rdf[['uid_idiap', 'tid']].groupby('uid_idiap').count()
     uids_test = nftalks_per_user.ix[nftalks_per_user['tid']>3]
     uids_test = np.random.choice(uids_test.index, size=N_TESTING_USERS, replace=False)

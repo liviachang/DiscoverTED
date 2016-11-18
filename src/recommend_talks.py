@@ -2,8 +2,8 @@ from src.utils import *
 from src.model_talk_topics import get_talk_doc, tokenize_talk_doc
 from src.model_talk_topics import get_topics_from_tf, get_topic_score_names
 
-token_mapper, mdl_LDA = load_lda_model_data()
-TK_topics_LDA, TP_info_LDA = load_lda_topics_data()
+token_mapper, mdl_LDA = load_LDA_model_data()
+TK_topics_LDA, TP_info_LDA = load_LDA_topics_data()
 G_rtopics, U_tscores, U_ftalks = load_group_data()
 TK_ratings, TK_info = load_talk_data()
 
@@ -30,9 +30,9 @@ def get_user_rating_types():
       print '{}: {}'.format(idx, rtyp)
 
   input_rtyp_idx = raw_input('\nTypes you are interested in: ' + \
-    '(say, \'4,5\' for \'Funny+Informative\'):  ')
+    '(say, \'5,7\' for \'Informative+Inspiring\'):  ')
   if input_rtyp_idx == '':
-    input_rtyp_idx = '4,5'
+    input_rtyp_idx = '5,7'
   input_rtyp_idx = map(int, input_rtyp_idx.replace(' ', '').split(','))
   print ', '.join([rtyp_dict[x] for x in input_rtyp_idx])
 
@@ -52,7 +52,7 @@ def get_fratings_per_rtypes(rcomb):
 def get_user_topic_keywords():
   user_text = raw_input('\nTopics you are interested in: (say, \'data science, finance\'):  ')
   if user_text == '':
-    user_text = 'data science, technology, computer, economics, finance, market, investing'
+    user_text = 'computer internet technology data stock market finance economics'
   print user_text
 
   return user_text
@@ -144,7 +144,7 @@ def rec_talks(uid):
 
 
 def print_rtalks(rec_tids):
-  LINE_LENGTH = 80
+  LINE_LENGTH = 100
 
   for rtid in rec_tids:
     tt = TK_info.ix[rtid]
@@ -175,8 +175,9 @@ def get_success_metrics(test_udf):
 
   for uid in test_udf['uid_idiap'].unique().tolist():
     tids = test_udf.ix[test_udf['uid_idiap']==uid, 'tid'] 
-    tids_input = np.random.choice(tids, 2)
+    tids_input = np.random.choice(tids, 2, replace=False)
     tids_truth = tids[~tids.isin(tids_input)]
+    #print 'uid={}, tids_input={}'.format(uid, tids_input)
 
     ## stop here program can't run get_talk_doc()
     user_text = TK_info.ix[tids_input].apply(get_talk_doc, axis=1).tolist()
@@ -222,7 +223,10 @@ def evaluate_recommender():
 
   
 if __name__ == '__main__':
-  MODE = ['RECOMMEND', 'EVALUATE'][1] ##FIXME: to change to EVALUATE
+  if len(sys.argv) > 1:
+    MODE = sys.argv[1]
+  else:
+    MODE = ['RECOMMEND', 'EVALUATE'][0]
 
   if MODE == 'RECOMMEND':
     msg = '\nPlease enter your UserID, or "n" (for a new user), or "q" (for quit): '

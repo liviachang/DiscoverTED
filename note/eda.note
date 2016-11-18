@@ -1,67 +1,74 @@
---- output from src/build_model.py
-2016/11/14 15:38:05: Program start
 
-Loading the rating data
-R.shape=(12401, 1201)
-
-Building NMF models and Finding k latent features
-R.shape=(12401, 1201), U.shape=(12401, 10), V.shape=(10, 1201),
-nmf_err=330.4354
-2016/11/14 15:38:22: Time to run NMF 17 secs
-
-Finding peers based on latent features
-# grps=55, # users=12401, min/max grp size=34, 830
-most common size of groups:
-[(261, 2), (97, 2), (128, 1), (193, 1), (237, 1), (400, 1), (148, 1), (149, 1),
-(150, 1), (156, 1), (159, 1), (161, 1), (34, 1), (167, 1), (554, 1), (263, 1),
-(173, 1), (174, 1), (49, 1), (499, 1), (308, 1), (55, 1), (442, 1), (830, 1),
-(63, 1), (65, 1), (324, 1), (69, 1), (71, 1), (200, 1), (201, 1), (330, 1),
-(203, 1), (205, 1), (78, 1), (208, 1), (209, 1), (340, 1), (221, 1), (94, 1),
-(223, 1), (101, 1), (360, 1), (233, 1), (106, 1), (365, 1), (353, 1), (114, 1),
-(627, 1), (117, 1), (246, 1), (404, 1), (126, 1)]
-2016/11/14 15:38:28: Time to find peers 6 secs
-
-Finding one candidate topic based on peers
-2016/11/14 15:39:04: Time to find topic from peers 36 secs
-
-Finding talk candidates based on the candidate topic
-2016/11/14 15:39:04: Time to find talks from topic 0 secs
-
-Picking one recommended talk based on the talk candidates and ratings
-2016/11/14 15:42:18: Time to pick one talk from candidates 194 secs
+--- N_GROUP_TOPICS=2, N_REC_TOPICS=3
+2016/11/17 21:49:25: Loading talk data
+My recommender: deeper 0.314142, wider 0.464162, total 0.778304
+Benchmark: deeper 0.305456, wider 0.464341, total 0.769797
+outputform: score 0.0085, freq 0.546667, pvalue 0.053337
 
 
---- output from src/clean_data.py
-Merging talk data from idiap and my scraping results
-idf.shape = (1203, 15), mdf.shape = (2318, 26), tdf.shape = (2318, 29)
-
+--- python src/clean_data.py
 Transforming user data from merged talk data and idiap user data
-<class 'pandas.core.frame.DataFrame'>
-Int64Index: 129633 entries, 0 to 129632
-Data columns (total 5 columns):
-uid_idiap      129633 non-null object
-fav_title      129633 non-null object
-fid            129633 non-null int64
-title_idiap    129557 non-null object
-tid            129557 non-null float64
-dtypes: float64(1), int64(1), object(3)
-memory usage: 5.9+ MB
-None
-rdf.shape = (129557, 5)
+python srdf_train=(101284, 5), rdf_test=(28273, 5)
+Save transformed user data into rating matrix
+rc/model_talk_topics.pySave transformed user data into rating matrix
 
 
--- apr, 2012
-Talks: 1149
-Speakers: 961
-Users: 69023
-Active Users: 10962
-Tags: 300
-Themes: 48
-Transcripts: 1102
-Related Videos: 3002
-Favorites: 108476
-Comments: 201934
---
+--- python src/model_talk_topics.py
+2016/11/17 21:56:57: Loading talk data
+
+--- python src/model_user_groups.py; python src/recommend_talks.py
+# topics = 10, # fav topics for groups = 2, # rec topics = 2
+2016/11/17 22:05:32: Loading talk data
+2016/11/17 22:05:32: Loading user data
+2016/11/17 22:05:36: Getting users' top 2 topics as group topics
+U_gtopics: #user = 10901, # gtopics = 2
+
+2016/11/17 22:05:40: Getting groups' users based on gtopics
+# grps=51, # total users=10901, (min, max) grp size=(1, 1020)
+
+2016/11/17 22:05:40: Getting groups' 2 recommended topics
+# grps=56, # rec topics=2
+
+2016/11/17 22:05:40: Getting users' recommended topics
+
+2016/11/17 22:05:44: Loading talk data
+My recommender: deeper 0.283569, wider 0.299932, total 0.583501
+Benchmark: deeper 0.254572, wider 0.274525, total 0.529096
+outputform: score 0.0544, freq 0.620667, pvalue 0.000000
+
+--- python src/model_user_groups.py; python src/recommend_talks.py
+# topics = 10, # fav topics for groups = 2, # rec topics = 3
+2016/11/17 22:08:05: Loading talk data
+2016/11/17 22:08:05: Loading user data
+2016/11/17 22:08:08: Getting users' top 2 topics as group topics
+U_gtopics: #user = 10901, # gtopics = 2
+
+2016/11/17 22:08:13: Getting groups' users based on gtopics
+# grps=51, # total users=10901, (min, max) grp size=(1, 1020)
+
+2016/11/17 22:08:13: Getting groups' 3 recommended topics
+# grps=56, # rec topics=3
+
+2016/11/17 22:08:13: Getting users' recommended topics
+2016/11/17 22:08:17: Loading talk data
+My recommender: deeper 0.283569, wider 0.420902, total 0.704471
+Benchmark: deeper 0.254572, wider 0.400232, total 0.654804
+outputform: score 0.0497, freq 0.655333, pvalue 0.000000
+
+--- rec "Informative, Inspiring" + "internet technology data computer investment finance economics"
+=====Bill Gross: The single biggest reason why startups succeed (TED2015)=====
+[keywords]
+business, creativity, technology
+=====Dilip Ratha: The hidden force in global economics: sending money home (TEDGlobal 2014)=====
+[keywords]
+business, economics, finance
+=====Joi Ito: Want to innovate? Become a "now-ist" (TED2014)=====
+[keywords]
+business, creativity, design, engineering, entrepreneur, innovation, investment, natural disaster,
+nuclear energy, product design, science, technology, telecom
+=====Sandra Aamodt: Why dieting doesn't usually work (TEDGlobal 2013)=====
+[keywords]
+health, neuroscience, obesity
 
 -- sep, 2012
 Talks: 1203

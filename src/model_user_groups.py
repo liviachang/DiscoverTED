@@ -55,7 +55,10 @@ def get_group_rtopics(G_users, U_ranks, n_rtopics):
   t1 = print_time('Getting groups\' {} recommended topics'.format(n_rtopics))
 
   G_rtopics = {}
-  for gtopics in G_users.iterkeys():
+  gtopics_keys = ['[]'] + ['[{}]'.format(x) for x in range(N_TOTAL_TOPICS)] + \
+    [ '[{}, {}]'.format(x[0], x[1]) for x in combinations(range(N_TOTAL_TOPICS),2)]
+
+  for gtopics in gtopics_keys:
     rtopics = get_group_rtopics_per_group(gtopics, G_users, U_ranks, n_rtopics)
     G_rtopics[gtopics] = rtopics
 
@@ -77,9 +80,8 @@ def get_group_rtopics_per_group(target_user_gtopics, G_users, U_ranks, n_rtopics
   
   ## if no latent featues to define groups for a given user
   ## define groups as all users
-  if target_user_gtopics == '[]':
+  if target_user_gtopics not in G_users.keys():
     target_U_ranks = U_ranks
-
   else:
     target_users = G_users[target_user_gtopics]
 
@@ -106,7 +108,7 @@ if __name__ == '__main__':
     N_TOTAL_TOPICS, N_GROUP_TOPICS, N_REC_TOPICS)
 
   TK_ratings, TK_info, U_ftalks, R_mat = load_ted_data()
-  TK_topics_all, TP_info = load_lda_topics_data()
+  TK_topics_all, TP_info = load_LDA_topics_data()
   TK_topics = TK_topics_all.loc[map(str, R_mat.columns)]
 
   ## get user-topic score matrix from user-talk matrix

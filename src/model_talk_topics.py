@@ -83,13 +83,13 @@ def get_topic_all_docs(tids, TK_info):
   desc = ' '.join( docs.tolist() )
   return desc
 
-def save_lda_topics_data():
+def save_LDA_topics_data():
   with open(LDA_TOPICS_FN, 'wb') as f:
     pickle.dump( (TK_topics, TP_info), f)
   
-def save_lda_model_data():
+def save_LDA_model_data():
   with open(LDA_MODEL_FN, 'wb') as f:
-    pickle.dump( (token_mapper, lda), f)
+    pickle.dump( (token_mapper, LDA), f)
 
 def get_topic_talks(TK_topics, TK_info):
   talk_df = TK_topics.reset_index()[['tid', 'top_topic1']]
@@ -104,9 +104,9 @@ def get_topic_talks(TK_topics, TK_info):
 
 if __name__ == '__main__':
   TK_ratings, TK_info = load_talk_data()
-  TK_topics, token_mapper, lda = model_talk_topics_LDA(TK_info)
+  TK_topics, token_mapper, LDA = model_talk_topics_LDA(TK_info)
   TP_info = get_topic_talks(TK_topics, TK_info)
 
-  save_lda_topics_data()
-  save_lda_model_data()
+  save_LDA_topics_data()
+  save_LDA_model_data()
   

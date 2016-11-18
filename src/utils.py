@@ -41,8 +41,8 @@ RATING_TYPES = ['Beautiful', 'Confusing', 'Courageous', 'Fascinating', \
   'Longwinded', 'OK', 'Obnoxious', 'Persuasive', 'Unconvincing']
 
 N_TOTAL_TOPICS = 10
-N_GROUP_TOPICS = 2
-N_REC_TOPICS = 2
+N_GROUP_TOPICS = 2 ## N_DEEPER_TOPICS
+N_REC_TOPICS = 2 ## N_WIDER_TOPICS
 N_TALK_CANDIDATES = 5
 N_TALKS_FOR_KWS = 15
 N_TESTING_USERS = 1500
@@ -101,15 +101,15 @@ def load_ted_data():
 
   return TK_ratings, TK_info, U_ftalks, R_mat
 
-def load_lda_topics_data():
+def load_LDA_topics_data():
   with open(LDA_TOPICS_FN) as f:
     TK_topics, TP_info = pickle.load(f)
   return TK_topics, TP_info
 
-def load_lda_model_data():
+def load_LDA_model_data():
   with open(LDA_MODEL_FN) as f:
-    token_mapper, lda = pickle.load(f)
-  return token_mapper, lda
+    token_mapper, LDA = pickle.load(f)
+  return token_mapper, LDA
 
 def load_group_data():
   with open(GROUP_DATA_FN) as f:

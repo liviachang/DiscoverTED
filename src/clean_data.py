@@ -1,8 +1,4 @@
-import pandas as pd
-import numpy as np
-import itertools
-import unicodedata
-import sys
+from src.utils import *
 
 def clean_idiap_talk_titles(titles_orig): # x=idf.title
   ## flatten the series of talk titles
@@ -33,14 +29,12 @@ def merge_talk_data():
   print 'Merging talk data from idiap and my scraping results'
 
   ## load and clean talk data from idiap
-  idiap_tfn = '/Users/liviachang/TED/idiap/ted_talks-10-Sep-2012.json'
-  idf = pd.read_json(idiap_tfn)
+  idf = pd.read_json(TALK_DATA_IDIAP_FN)
   idf['title_idiap'] = clean_idiap_talk_titles(idf.title)
   idf['url'] = [x.replace('.html', '') for x in idf['url']]
 
   ## load data created by src/scrape_ted_talks.py
-  my_tfn = '/Users/liviachang/Galvanize/capstone/data/talks_info_scraped.csv'
-  mdf = pd.read_csv(my_tfn)
+  mdf = pd.read_csv(TALK_DATA_SCRAPED_FN)
 
   ## use url to map idiap and my scraped talk data
   idiap_cols = ['title_idiap', 'url', 'related_themes', 'related_videos']
@@ -52,7 +46,7 @@ def merge_talk_data():
     idf.shape, mdf.shape, tdf.shape)
   
   ## export the data for future use
-  tdf.to_csv('/Users/liviachang/Galvanize/capstone/data/talks_info_merged.csv', index=False)
+  tdf.to_csv(TALK_DATA_FN, index=False)
 
   return tdf
   
@@ -68,13 +62,12 @@ def flatten_user_favorites(x): ## x = udf.favorites[0]
 
 def clean_user_data():
   ## load idiap user data
-  ufn = '/Users/liviachang/TED/idiap/ted_users-10-Sep-2012.json'
-  udf_orig = pd.read_json(ufn)
+  udf_orig = pd.read_json(USER_DATA_IDIAP_FN)
 
   ## flatten user data 
   ## each row for each "user/favorite title" combination
   udf = udf_orig.apply(flatten_user_favorites, axis=1)
-  udf = list(itertools.chain(*udf))
+  udf = list(chain(*udf))
   udf = pd.DataFrame(udf, columns=['uid_idiap', 'fav_title'])
 
   ## add fid as "favorite_id" 
@@ -87,57 +80,55 @@ def clean_user_data():
 
   return udf
 
-def transform_user_data():
+def transform_user_data(is_split=True):
   print '\nTransforming user data from merged talk data and idiap user data'
 
   ## load talk data
-  tfn = '/Users/liviachang/Galvanize/capstone/data/talks_info_merged.csv'
-  tdf = pd.read_csv(tfn)
-
+  tdf = pd.read_csv(TALK_DATA_FN)
   ## load user data
   udf = clean_user_data()
 
   ## generate rating data from talk + user data
   ## each row for each "user/favorite title" combination
-  tcols = ['title_idiap', 'tid']
-  rdf = pd.merge(udf, tdf[tcols], how='left', left_on='fav_title', right_on='title_idiap')
-  rdf = rdf.drop_duplicates(rdf)
-
-  ## print basic stats to check the merge quality
-  print rdf.info()
-
   ## some favorite talks in the user data is no longer available on ted.com
   ## remove them (~0.05% of the original user data)
-  rdf = rdf.dropna()
-  print 'rdf.shape = {}'.format(rdf.shape)
+  tcols = ['title_idiap', 'tid']
+  rdf = pd.merge(udf, tdf[tcols], how='left', left_on='fav_title', right_on='title_idiap')
+  rdf = rdf.drop_duplicates(rdf).dropna()
 
-  ## export the data for model building
-  rdf.to_csv('/Users/liviachang/Galvanize/capstone/data/users_info_transformed.csv', index=False)
-  return rdf
+  if is_split:
+    np.random.seed(319)
+    nftalks_per_user = rdf[['uid_idiap', 'tid']].groupby('uid_idiap').count()
+    uids_test = nftalks_per_user.ix[nftalks_per_user['tid']>3]
+    uids_test = np.random.choice(uids_test.index, size=N_TESTING_USERS, replace=False)
+    rdf_test = rdf.ix[rdf['uid_idiap'].isin(uids_test),:]
+    rdf_train = rdf.ix[-rdf['uid_idiap'].isin(uids_test),:]
 
-def get_rating_matrix():
+    rdf_train.to_csv(USER_TALK_FN, index=False)
+    rdf_test.to_csv(TEST_USER_TALK_FN, index=False)
+
+    return rdf_train, rdf_test
+  else:
+    ## export the data for model building
+    rdf.to_csv(USER_TALK_FN, index=False)
+    return rdf,
+
+def get_rating_matrix(user_talk_fn, rating_fn):
   print 'Save transformed user data into rating matrix'
-  rfn = '/Users/liviachang/Galvanize/capstone/data/users_info_transformed.csv'
-  rdf = pd.read_csv(rfn)
+  rdf = pd.read_csv(user_talk_fn)
   rdf['tid'] = rdf['tid'].astype(int)
   rdf['rating'] = 1
 
   rmat = rdf.pivot(index='uid_idiap', columns='tid', values='rating').fillna(0)
-  rmat.to_csv('/Users/liviachang/Galvanize/capstone/data/rating_matrix.csv')
+  rmat.to_csv(rating_fn)
   
-  N_UIDS = 1000
-  uids_all = rdf['uid_idiap'].unique()
-  uids_small = np.random.choice(uids_all, size=N_UIDS)
-  rdf_small = rdf[rdf['uid_idiap'].isin(uids_small)]
-  rmat_small = rdf_small.pivot(index='uid_idiap', columns='tid', values='rating').fillna(0)
-  rmat_small.to_csv('/Users/liviachang/Galvanize/capstone/data/rating_matrix_small.csv')
-  
-  print 'rmat.shape={}, rmat_small.shape={}'.format(rmat.shape, rmat_small.shape)
-
-
 if __name__ == '__main__':
+  IS_SPLIT_USERS = True
   #tdf = merge_talk_data()
-  #rdf = transform_user_data()
-  get_rating_matrix()
+  rdf_train, rdf_test = transform_user_data()
+  print 'rdf_train={}, rdf_test={}'.format(rdf_train.shape, rdf_test.shape)
+  get_rating_matrix(USER_TALK_FN, RATING_MATRIX_FN)
+  get_rating_matrix(TEST_USER_TALK_FN, TEST_RATING_MATRIX_FN)
+  pass
 
 

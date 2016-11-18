@@ -1,5 +1,6 @@
 from src.utils import *
-from src.model_talk_topics import tokenize_talk_doc, get_topics_from_tf, get_topic_score_names
+from src.model_talk_topics import get_talk_doc, tokenize_talk_doc
+from src.model_talk_topics import get_topics_from_tf, get_topic_score_names
 
 token_mapper, mdl_LDA = load_lda_model_data()
 TK_topics_LDA, TP_info_LDA = load_lda_topics_data()
@@ -88,12 +89,12 @@ def get_user_rec_talks(tscores, user_fratings):
   deeper_candidates = TP_info_LDA.ix[deeper_rtopics, 'tids'].tolist()
   deeper_rtalks = get_rtalks_from_ratings(user_fratings, deeper_candidates)
 
-  ## for topics to go broader (topics new to the user)
-  broader_rtopics = G_rtopics[gtopics_key]
-  broader_candidates = TP_info_LDA.ix[broader_rtopics, 'tids'].tolist()
-  broader_rtalks = get_rtalks_from_ratings(user_fratings, broader_candidates)
+  ## for topics to go wider (topics new to the user)
+  wider_rtopics = G_rtopics[gtopics_key]
+  wider_candidates = TP_info_LDA.ix[wider_rtopics, 'tids'].tolist()
+  wider_rtalks = get_rtalks_from_ratings(user_fratings, wider_candidates)
 
-  return deeper_rtalks + broader_rtalks
+  return deeper_rtalks + wider_rtalks, deeper_rtopics + wider_rtopics
  
 def get_rtalks_from_ratings(user_ratings, candidates):
   rtalks = []
@@ -138,7 +139,7 @@ def rec_talks(uid):
       uid = random.choice( U_tscores.index )
     tscores, fratings = get_existing_user_tscores_fratings(uid)
 
-  rec_tids = get_user_rec_talks(tscores, fratings)
+  rec_tids, rec_topics = get_user_rec_talks(tscores, fratings)
   print_rtalks(rec_tids)
 
 
@@ -159,14 +160,79 @@ def print_rtalks(rec_tids):
 
     print msg
 
+def evaluate_tids():
+  #nftalks_per_user = U_ftalks[['uid_idiap', 'tid']].groupby('uid_idiap').count()
+  #uids = nftalks_per_user.ix[nftalks_per_user['tid']>3]
+  #uids = np.random.choice(uids.index, size=100)
+  return uids
+
+def get_success_metrics(test_udf):
+  np.random.seed(319)
+  talks_per_topic_LDA = TK_topics_LDA['top_topic1'].value_counts()
+  talks_per_topic_LDA = talks_per_topic_LDA.sort_index() / sum(talks_per_topic_LDA)
+
+  deeper_scores, wider_scores, deeper_bmk, wider_bmk = [], [], [], []
+
+  for uid in test_udf['uid_idiap'].unique().tolist():
+    tids = test_udf.ix[test_udf['uid_idiap']==uid, 'tid'] 
+    tids_input = np.random.choice(tids, 2)
+    tids_truth = tids[~tids.isin(tids_input)]
+
+    ## stop here program can't run get_talk_doc()
+    user_text = TK_info.ix[tids_input].apply(get_talk_doc, axis=1).tolist()
+    user_text = reduce(lambda x, y: x+y, user_text)
+    user_text = user_text.replace('[', '').replace(']', '')
+    user_tscores = get_topics_from_text_LDA(user_text)
+
+    user_fratings = TK_ratings.ix[tids_input]
+
+    rec_tids, topics_rec = get_user_rec_talks(user_tscores, user_fratings)
+    topics_input = TK_topics_LDA.ix[tids_input, 'top_topic1']
+    topics_truth = TK_topics_LDA.ix[tids_truth, 'top_topic1']
+
+    topics_rec_num = [float(x.replace('topic0', '')) for x in topics_rec]
+    deeper_scores.append(np.mean(topics_truth.isin(topics_rec_num[:N_GROUP_TOPICS]) ))
+    wider_scores.append(np.mean(topics_truth.isin(topics_rec_num[N_GROUP_TOPICS:]) ))
+    deeper_bmk.append(sum( talks_per_topic_LDA[topics_rec_num[:N_GROUP_TOPICS]] ))
+    wider_bmk.append(sum( talks_per_topic_LDA[topics_rec_num[N_GROUP_TOPICS:]] ))
+  
+  return np.array(deeper_scores), np.array(wider_scores), \
+    np.array(deeper_bmk), np.array(wider_bmk)
+
+def evaluate_recommender():
+  ## get testing uids
+  #uids = evaluate_tids()
+  test_udf = pd.read_csv(TEST_USER_TALK_FN)
+  test_udf['tid'] = test_udf['tid'].astype(int)
+    
+  deeper_scores, wider_scores, deeper_bmk, wider_bmk = get_success_metrics(test_udf)
+  rec_scores = deeper_scores + wider_scores
+  bmk_scores = deeper_bmk + wider_bmk
+  outperform_scores = (rec_scores - bmk_scores)
+
+  print 'My recommender: deeper {:4f}, wider {:4f}, total {:4f}'.format(\
+    np.mean(deeper_scores), np.mean(wider_scores), np.mean(rec_scores))
+  print 'Benchmark: deeper {:4f}, wider {:4f}, total {:4f}'.format(\
+    np.mean(deeper_bmk), np.mean(wider_bmk), np.mean(bmk_scores))
+  print 'outputform: score {:.4f}, freq {:4f}, pvalue {:4f}'.format(\
+    np.mean(outperform_scores), np.mean(outperform_scores>0),
+    ttest_1samp(outperform_scores, 0).pvalue)
+
+  return deeper_scores, wider_scores, deeper_bmk, wider_bmk, outperform_scores
+
   
 if __name__ == '__main__':
-  msg = '\nPlease enter your UserID, or "n" (for a new user), or "q" (for quit): '
+  MODE = ['RECOMMEND', 'EVALUATE'][1] ##FIXME: to change to EVALUATE
 
-  uid = raw_input(msg)
-  while uid.lower() not in ['q', '']:
-    rec_talks(uid)
+  if MODE == 'RECOMMEND':
+    msg = '\nPlease enter your UserID, or "n" (for a new user), or "q" (for quit): '
+
     uid = raw_input(msg)
+    while uid.lower() not in ['q', '']:
+      rec_talks(uid)
+      uid = raw_input(msg)
+  else:
+    evaluate_recommender()
 
 
 

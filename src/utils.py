@@ -3,7 +3,7 @@ from datetime import datetime
 from functools import partial as ftPartial
 from gensim import corpora
 from gensim.models.ldamodel import LdaModel
-from itertools import combinations
+from itertools import combinations, chain
 from nltk.stem.porter import PorterStemmer
 from nltk.tokenize import RegexpTokenizer
 from scipy.stats import rankdata
@@ -18,14 +18,19 @@ import os
 import pandas as pd
 import random
 import re
+import sys
 import textwrap
+from scipy.stats import ttest_1samp
 
-RATING_MATRIX_FN = '/Users/liviachang/Galvanize/capstone/data/rating_matrix.csv'
 TALK_DATA_FN = '/Users/liviachang/Galvanize/capstone/data/talks_info_merged.csv'
-USER_TALK_FN = '/Users/liviachang/Galvanize/capstone/data/users_info_transformed.csv'
+USER_TALK_FN = '/Users/liviachang/Galvanize/capstone/data/train_users_info_transformed.csv'
+TEST_USER_TALK_FN = '/Users/liviachang/Galvanize/capstone/data/test_users_info_transformed.csv'
+RATING_MATRIX_FN = '/Users/liviachang/Galvanize/capstone/data/train_rating_matrix.csv'
+TEST_RATING_MATRIX_FN = '/Users/liviachang/Galvanize/capstone/data/test_rating_matrix.csv'
 
-BROADER_MODEL_NEW_USERS_FN = '/Users/liviachang/Galvanize/capstone/model/rec_broader_new.pkl'
-BROADER_MODEL_EXISTING_USERS_FN = '/Users/liviachang/Galvanize/capstone/model/rec_broader_existing.pkl'
+TALK_DATA_SCRAPED_FN = '/Users/liviachang/Galvanize/capstone/data/talks_info_scraped.csv'
+TALK_DATA_IDIAP_FN = '/Users/liviachang/TED/idiap/ted_talks-10-Sep-2012.json'
+USER_DATA_IDIAP_FN = '/Users/liviachang/TED/idiap/ted_users-10-Sep-2012.json'
 
 LDA_MODEL_FN = '/Users/liviachang/Galvanize/capstone/model/model_lda.pkl'
 LDA_TOPICS_FN = '/Users/liviachang/Galvanize/capstone/model/data_lda_topics.pkl'
@@ -40,6 +45,7 @@ N_GROUP_TOPICS = 2
 N_REC_TOPICS = 2
 N_TALK_CANDIDATES = 5
 N_TALKS_FOR_KWS = 15
+N_TESTING_USERS = 1500
 
 IS_PRINT_TIME = False
 

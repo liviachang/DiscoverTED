@@ -80,7 +80,8 @@ def get_group_rtopics_per_group(target_user_gtopics, G_users, U_ranks, n_rtopics
   
   ## if no latent featues to define groups for a given user
   ## define groups as all users
-  if target_user_gtopics not in G_users.keys():
+
+  if (target_user_gtopics=='[]') or (target_user_gtopics not in G_users.keys()):
     target_U_ranks = U_ranks
   else:
     target_users = G_users[target_user_gtopics]
@@ -106,6 +107,8 @@ def save_group_data(G_rtopics, U_tscores, mdl_name):
     output_fn = LDA_GROUP_DATA_FN
   elif mdl_name == 'NMF':
     output_fn = NMF_GROUP_DATA_FN
+  elif mdl_name == 'GMF':
+    output_fn = GMF_GROUP_DATA_FN
 
   with open(output_fn, 'wb') as f:
     pickle.dump( (G_rtopics, U_tscores), f)

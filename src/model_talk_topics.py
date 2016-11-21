@@ -69,6 +69,31 @@ def model_talk_topics_NMF(R):
 
   return TK_topics, U, V
 
+def model_talk_topics_GMF(R):
+  data = R.reset_index()
+  df = pd.melt( data, id_vars='uid_idiap', value_vars=list(data.columns[1:]),
+    var_name='tid', value_name='rating')
+  sdf = gl.SFrame(df)
+  gmf = gl.factorization_recommender.create(sdf, 'uid_idiap', 'tid', 'rating', 
+    num_factors=N_TOTAL_TOPICS)
+  M = gmf.get('coefficients')
+
+  U = M['uid_idiap']
+  U = pd.DataFrame( U['factors'].to_numpy(), index=U['uid_idiap'], 
+    columns=range(N_TOTAL_TOPICS))
+  
+  V = M['tid']
+  V = pd.DataFrame( V['factors'].to_numpy().transpose(), 
+    index=range(N_TOTAL_TOPICS), columns=V['tid'])
+  V.index = ['topic{:02d}'.format(x) for x in xrange(V.shape[0])]
+
+  V_top_topics = V.apply(lambda x: x.argsort()[::-1][:N_GROUP_TOPICS])
+  V_top_topics.index = ['top_topic{}'.format(x+1) for x in xrange(V_top_topics.shape[0])]
+  TK_topics = V.append(V_top_topics).transpose()
+  TK_topics.index.name = 'tid'
+  
+  return TK_topics, U, V
+
 def model_talk_topics_LDA(TK_info):
   TK_docs = TK_info.apply(get_talk_doc, axis=1)
   TK_tokens = get_talk_tokens(TK_docs)
@@ -114,7 +139,15 @@ def save_NMF_topics_data():
 
 def save_NMF_model_data():
   with open(NMF_MODEL_FN, 'wb') as f:
-    pickle.dump( (U_NMF, V_NMF, tfidf_vec, TP_tfidf), f)
+    pickle.dump( (U_NMF, V_NMF, tfidf_vec_NMF, TP_tfidf_NMF), f)
+
+def save_GMF_topics_data():
+  with open(GMF_TOPICS_FN, 'wb') as f:
+    pickle.dump( (TK_topics_GMF, TP_info_GMF), f)
+
+def save_GMF_model_data():
+  with open(GMF_MODEL_FN, 'wb') as f:
+    pickle.dump( (U_GMF, V_GMF, tfidf_vec_GMF, TP_tfidf_GMF), f)
   
 def get_topic_talks(TK_topics, TK_info):
   talk_df = TK_topics.reset_index()[['tid', 'top_topic1']]
@@ -142,9 +175,16 @@ if __name__ == '__main__':
 
   TK_topics_NMF, U_NMF, V_NMF = model_talk_topics_NMF(R_mat)
   TP_info_NMF = get_topic_talks(TK_topics_NMF, TK_info)
-  tfidf_vec = TfidfVectorizer(stop_words='english')
-  TP_tfidf = tfidf_vec.fit_transform(TP_info_NMF['desc'].values)
-
+  tfidf_vec_NMF = TfidfVectorizer(stop_words='english')
+  TP_tfidf_NMF = tfidf_vec_NMF.fit_transform(TP_info_NMF['desc'].values)
   save_NMF_topics_data()
   save_NMF_model_data()
+  
+  TK_topics_GMF, U_GMF, V_GMF = model_talk_topics_GMF(R_mat)
+  TP_info_GMF = get_topic_talks(TK_topics_GMF, TK_info)
+  tfidf_vec_GMF = TfidfVectorizer(stop_words='english')
+  TP_tfidf_GMF = tfidf_vec_GMF.fit_transform(TP_info_GMF['desc'].values)
+  save_GMF_topics_data()
+  save_GMF_model_data()
+
   

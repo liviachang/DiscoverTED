@@ -21,6 +21,7 @@ import re
 import sys
 import textwrap
 from scipy.stats import ttest_1samp
+import graphlab as gl
 
 TALK_DATA_FN = '/Users/liviachang/Galvanize/capstone/data/talks_info_merged.csv'
 USER_TALK_FN = '/Users/liviachang/Galvanize/capstone/data/train_users_info_transformed.csv'
@@ -40,6 +41,10 @@ NMF_MODEL_FN = '/Users/liviachang/Galvanize/capstone/model/model_nmf.pkl'
 NMF_TOPICS_FN = '/Users/liviachang/Galvanize/capstone/model/data_nmf_topics.pkl'
 NMF_GROUP_DATA_FN = '/Users/liviachang/Galvanize/capstone/model/data_nmf_user_groups.pkl'
 
+GMF_MODEL_FN = '/Users/liviachang/Galvanize/capstone/model/model_gmf.pkl'
+GMF_TOPICS_FN = '/Users/liviachang/Galvanize/capstone/model/data_gmf_topics.pkl'
+GMF_GROUP_DATA_FN = '/Users/liviachang/Galvanize/capstone/model/data_gmf_user_groups.pkl'
+
 RATING_TYPES = ['Beautiful', 'Confusing', 'Courageous', 'Fascinating', \
   'Funny','Informative', 'Ingenious', 'Inspiring', 'Jaw-dropping', \
   'Longwinded', 'OK', 'Obnoxious', 'Persuasive', 'Unconvincing']
@@ -53,7 +58,7 @@ N_TESTING_USERS = 1500
 
 IS_PRINT_TIME = False
 
-MODEL_NAMES = ['LDA', 'NMF']
+MODEL_NAMES = ['LDA', 'NMF', 'GMF'] 
 
 def print_time(msg, t1=None):
   t2 = time()
@@ -113,6 +118,8 @@ def load_topics_data(mdl_name=MODEL_NAMES[0]):
     topic_fn = LDA_TOPICS_FN
   elif mdl_name == 'NMF':
     topic_fn = NMF_TOPICS_FN
+  elif mdl_name == 'GMF':
+    topic_fn = GMF_TOPICS_FN
 
   with open(topic_fn) as f:
     TK_topics, TP_info = pickle.load(f)
@@ -124,6 +131,8 @@ def load_group_data(mdl_name=MODEL_NAMES[0]):
     data_fn = LDA_GROUP_DATA_FN
   elif mdl_name == 'NMF':
     data_fn = NMF_GROUP_DATA_FN
+  elif mdl_name == 'GMF':
+    data_fn = GMF_GROUP_DATA_FN
 
   with open(data_fn) as f:
     G_rtopics, U_tscores = pickle.load(f)
@@ -135,14 +144,16 @@ def load_LDA_model_data():
     token_mapper, mdl_LDA = pickle.load(f)
   return token_mapper, mdl_LDA
 
-def load_NMF_model_data():
-  with open(NMF_MODEL_FN) as f:
-    U_NMF, V_NMF, tfidf_vec, TP_tfidf = pickle.load(f)
-  return U_NMF, V_NMF, tfidf_vec, TP_tfidf
+def load_MF_model_data(mdl_name):
+  if mdl_name == 'NMF':
+    mdl_fn = NMF_MODEL_FN
+  elif mdl_name == 'GMF':
+    mdl_fn = GMF_MODEL_FN
+  else:
+    print 'wrong model file {}'.format(mdl_name)
+
+  with open(mdl_fn) as f:
+    U, V, tfidf_vec, TP_tfidf = pickle.load(f)
+  return U, V, tfidf_vec, TP_tfidf
   
 np.random.seed(0)
-
-#def load_NMF_group_data():
-#  with open(NMF_GROUP_DATA_FN) as f:
-#    G_rtopics, U_tscores, U_ftalks = pickle.load(f)
-#  return G_rtopics, U_tscores, U_ftalks

@@ -10,7 +10,11 @@ token_mapper, mdl_LDA = load_LDA_model_data()
 
 TK_topics_NMF, TP_info_NMF = load_topics_data(mdl_name='NMF')
 G_rtopics_NMF, U_tscores_NMF = load_group_data(mdl_name='NMF')
-U_NMF, V_NMF, tfidf_vec, TP_tfidf = load_NMF_model_data()
+U_NMF, V_NMF, tfidf_vec_NMF, TP_tfidf_NMF = load_MF_model_data(mdl_name='NMF')
+
+TK_topics_GMF, TP_info_GMF = load_topics_data(mdl_name='GMF')
+G_rtopics_GMF, U_tscores_GMF = load_group_data(mdl_name='GMF')
+U_GMF, V_GMF, tfidf_vec_GMF, TP_tfidf_GMF = load_MF_model_data(mdl_name='GMF')
 
 
 def get_new_user_fav_ratings():
@@ -75,10 +79,18 @@ def get_topics_from_text(text, mdl_name=MODEL_NAMES[0]):
     result = pd.Series(topics, index=get_topic_score_names())
 
   elif mdl_name == 'NMF':
-    tfidf_vec = TfidfVectorizer(stop_words='english')
-    TP_tfidf = tfidf_vec.fit_transform(TP_info['desc'].values)
-    new_tfidf = tfidf_vec.transform([' '.join(new_tokens)])
-    cos_sim = linear_kernel(new_tfidf, TP_tfidf)[0]
+    #tfidf_vec_NMF = TfidfVectorizer(stop_words='english')
+    #TP_tfidf_NMF = tfidf_vec_NMF.fit_transform(TP_info['desc'].values)
+    new_tfidf = tfidf_vec_NMF.transform([' '.join(new_tokens)])
+    cos_sim = linear_kernel(new_tfidf, TP_tfidf_NMF)[0]
+    gtopics = cos_sim.argsort()[::-1][:N_GROUP_TOPICS]
+    result = pd.Series(np.concatenate([cos_sim, gtopics]), index=get_topic_score_names())
+  
+  elif mdl_name == 'GMF':
+    #tfidf_vec_GMF = TfidfVectorizer(stop_words='english')
+    #TP_tfidf_GMF = tfidf_vec_GMF.fit_transform(TP_info['desc'].values)
+    new_tfidf = tfidf_vec_GMF.transform([' '.join(new_tokens)])
+    cos_sim = linear_kernel(new_tfidf, TP_tfidf_GMF)[0]
     gtopics = cos_sim.argsort()[::-1][:N_GROUP_TOPICS]
     result = pd.Series(np.concatenate([cos_sim, gtopics]), index=get_topic_score_names())
 
@@ -192,6 +204,9 @@ def get_success_metrics(test_udf, mdl_name):
   elif mdl_name == 'NMF':
     G_rtopics, U_tscores, TK_topics, TP_info = \
       G_rtopics_NMF, U_tscores_NMF, TK_topics_NMF, TP_info_NMF
+  elif mdl_name == 'GMF':
+    G_rtopics, U_tscores, TK_topics, TP_info = \
+      G_rtopics_GMF, U_tscores_GMF, TK_topics_GMF, TP_info_GMF
 
   talks_per_topic = TK_topics['top_topic1'].value_counts()
   talks_per_topic = talks_per_topic.sort_index() / sum(talks_per_topic)
@@ -263,6 +278,9 @@ if __name__ == '__main__':
     elif MODEL == 'NMF':
       G_rtopics, U_tscores, TK_topics, TP_info = \
         G_rtopics_NMF, U_tscores_NMF, TK_topics_NMF, TP_info_NMF
+    elif MODEL == 'GMF':
+      G_rtopics, U_tscores, TK_topics, TP_info = \
+        G_rtopics_GMF, U_tscores_GMF, TK_topics_GMF, TP_info_GMF
 
     uid = raw_input(msg)
     while uid.lower() not in ['q', '']:

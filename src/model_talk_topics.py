@@ -25,8 +25,9 @@ def tokenize_talk_doc(doc, tokenizer, stop_wds, stemmer):
   tokens = tokenizer.tokenize(doc)
   tokens_no_stop_wds = [wd for wd in tokens if not wd in stop_wds]
   tokens_stemmed = [stemmer.stem(wd) for wd in tokens_no_stop_wds]
+  tokens_xshort = [x for x in tokens_stemmed if len(x)>=3]
 
-  return tokens_stemmed
+  return tokens_xshort
 
 def get_talk_tokens(docs):
   '''
@@ -35,21 +36,27 @@ def get_talk_tokens(docs):
       one row for one talk. index is talk id. content is a list of tokenized words
   Output: 
   '''
-  tknizer = RegexpTokenizer(r'\w+')
+  tknizer = RegexpTokenizer(r'[a-zA-Z]+')
   stop_wds = get_stop_words('en')
-  pstemmer = PorterStemmer()
-  tmpf = ftPartial(tokenize_talk_doc, tokenizer=tknizer, stop_wds=stop_wds, stemmer=pstemmer)
+  #pstemmer = PorterStemmer()
+  #tmpf = ftPartial(tokenize_talk_doc, tokenizer=tknizer, stop_wds=stop_wds, stemmer=pstemmer)
+  sstemmer = SnowballStemmer('english')
+  tmpf = ftPartial(tokenize_talk_doc, tokenizer=tknizer, stop_wds=stop_wds, stemmer=sstemmer)
   tokens = docs.apply(tmpf)
   return tokens
 
 def get_topics_from_tf(x, mdl):
   score_tuple = mdl[x]
-  result = np.zeros(N_TOTAL_TOPICS+N_GROUP_TOPICS)
+  result = np.zeros(N_TOTAL_TOPICS+N_GROUP_TOPICS) 
   for (idx, score) in score_tuple:
     result[idx] = score
+  result[N_TOTAL_TOPICS:] = np.nan
 
-  top_topics = result.argsort()[::-1][:N_GROUP_TOPICS]
-  for idx in xrange(N_GROUP_TOPICS):
+  #top_topics = result.argsort()[::-1][:N_GROUP_TOPICS]
+  #for idx in xrange(N_GROUP_TOPICS):
+  top_topics = result[:N_TOTAL_TOPICS].argsort()[::-1]
+  top_topics = top_topics[:min(N_GROUP_TOPICS, sum(result>0.))]
+  for idx in xrange(len(top_topics)):
     result[N_TOTAL_TOPICS+idx] = top_topics[idx]
   return result
 
@@ -111,8 +118,17 @@ def model_talk_topics_LDA(TK_info):
   df.index = TK_info.index
   df['tokens'] = TK_tokens
 
+  
+
   return df, id2word, mdl
 
+def print_LDA_topic_keywords(mdl):
+  topic_kws = mdl.print_topics()
+  for (idx, kws) in topic_kws:
+    kws = kws.split(' + ')
+    kws = [re.findall(r'\w+', kw)[2] for kw in kws]
+    kws = ', '.join(kws)
+    print 'topic{:02d}: {}'.format(idx, kws)
 
 def get_topic_score_names():
   df_cols = ['topic{:02d}'.format(x) for x in range(N_TOTAL_TOPICS)]

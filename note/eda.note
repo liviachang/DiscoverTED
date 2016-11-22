@@ -29,22 +29,48 @@ My recommender: deeper 0.199184, wider 0.210224, total 0.409408
 Benchmark: deeper 0.200919, wider 0.198319, total 0.399238
 outputform: score 0.0102, freq 0.533333, pvalue 0.061573
 
+-- rec 
+--- data technology computer internet engineering education child kid elementary school
+--- Informative, Inspiring
+=====Mitch Resnick: Let's teach kids to code (TEDxBeaconStreet)=====
+[keywords]
+Internet, TEDx, children, code, computers, education, parenting, technology,
+youth
+=====Michael Green: How we can make the world a better place by 2030
+(TEDGlobal>London)=====
+[keywords]
+big problems, economics, future, global development, global issues,
+goal-setting, policy, statistics
+=====Angela Lee Duckworth: Grit: The power of passion and perseverance (TED
+Talks Education)=====
+[keywords]
+business, education, psychology, success
+=====Hilary Cottam: Social services are broken. How we can fix them
+(TEDGlobal>London)=====
+[keywords]
+big problems, community, relationships, social change
+
+--- rec
+--- kid youth education school development finance investment stock bond gold money
+--- Inspiring
+=====Simon Sinek: Why good leaders make you feel safe (TED2014)=====
+[keywords]
+business, leadership, military, work
+=====John Wooden: The difference between winning and succeeding (TED2001)=====
+[keywords]
+culture, education, leadership, life, poetry, sports, work
+[themes]
+Master Storytellers, What Makes Us Happy?, How We Learn
+=====Scott Dinsmore: How to find work you love (TEDxGoldenGatePark 2012)=====
+[keywords]
+TEDx, business, entrepreneur, happiness, work, work-life balance
+=====Susan Lim: Transplant cells, not organs (INK Conference)=====
+[keywords]
+business, technology
+[themes]
+Medicine Without Borders
 
 
---- rec "Informative, Inspiring" + "internet technology data computer investment finance economics"
-=====Bill Gross: The single biggest reason why startups succeed (TED2015)=====
-[keywords]
-business, creativity, technology
-=====Dilip Ratha: The hidden force in global economics: sending money home (TEDGlobal 2014)=====
-[keywords]
-business, economics, finance
-=====Joi Ito: Want to innovate? Become a "now-ist" (TED2014)=====
-[keywords]
-business, creativity, design, engineering, entrepreneur, innovation, investment, natural disaster,
-nuclear energy, product design, science, technology, telecom
-=====Sandra Aamodt: Why dieting doesn't usually work (TEDGlobal 2013)=====
-[keywords]
-health, neuroscience, obesity
 
 -- sep, 2012
 Talks: 1203

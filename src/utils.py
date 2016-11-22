@@ -5,6 +5,7 @@ from gensim import corpora
 from gensim.models.ldamodel import LdaModel
 from itertools import combinations, chain
 from nltk.stem.porter import PorterStemmer
+from nltk.stem.snowball import SnowballStemmer
 from nltk.tokenize import RegexpTokenizer
 from scipy.stats import rankdata
 from sklearn.decomposition import NMF
@@ -59,6 +60,7 @@ N_TESTING_USERS = 1500
 IS_PRINT_TIME = False
 
 MODEL_NAMES = ['LDA', 'NMF', 'GMF'] 
+BEST_MODEL = 'LDA'
 
 def print_time(msg, t1=None):
   t2 = time()
@@ -145,6 +147,7 @@ def load_LDA_model_data():
   return token_mapper, mdl_LDA
 
 def load_MF_model_data(mdl_name):
+  print_time('Loading model data from {}'.format(mdl_name))
   if mdl_name == 'NMF':
     mdl_fn = NMF_MODEL_FN
   elif mdl_name == 'GMF':

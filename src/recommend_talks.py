@@ -36,8 +36,13 @@ def get_user_rating_types():
   rtyp_idx = range(len(RATING_TYPES) )
   rtyp_dict = dict(zip(rtyp_idx, RATING_TYPES) )
 
+  output = ''
   for (idx, rtyp) in rtyp_dict.iteritems():
-      print '{}: {}'.format(idx, rtyp)
+    output += '{0: >2d}: '.format(idx)
+    output += '{0: <12} | '.format(rtyp)
+    if idx % 4 == 3:
+      output = output + '\n'
+  print output
 
   input_rtyp_idx = raw_input('\nTypes you are interested in: ' + \
     '(say, \'5,7\' for \'Informative+Inspiring\'):  ')
@@ -70,8 +75,11 @@ def get_user_topic_keywords():
 def get_topics_from_text(text, mdl_name=MODEL_NAMES[0]):
   tknizer = RegexpTokenizer(r'\w+')
   stop_wds = get_stop_words('en')
-  pstemmer = PorterStemmer()
-  new_tokens = tokenize_talk_doc(text, tknizer, stop_wds, pstemmer)
+  #pstemmer = PorterStemmer()
+  #new_tokens = tokenize_talk_doc(text, tknizer, stop_wds, pstemmer)
+  
+  sstemmer = SnowballStemmer('english')
+  new_tokens = tokenize_talk_doc(text, tknizer, stop_wds, sstemmer)
 
   if mdl_name == 'LDA':
     new_tf = token_mapper.doc2bow(new_tokens)
@@ -107,19 +115,29 @@ def get_new_user_tscores_fratings(mdl_name):
 
   return user_tscores, user_fratings
 
-def get_user_rec_talks(tscores, user_fratings):
+def get_user_rec_talks(tscores, user_fratings, input_tids=None):
 
-  gtopics_list = map(int, tscores[N_TOTAL_TOPICS:])
-  gtopics_key = str(sorted(map(int, tscores[N_TOTAL_TOPICS:])))
+  #gtopics_list = map(int, tscores[N_TOTAL_TOPICS:])
+  #gtopics_key = str(sorted(map(int, tscores[N_TOTAL_TOPICS:])))
+  
+  gtopics_list = [x for x in tscores[N_TOTAL_TOPICS:] if ~np.isnan(x)]
+  gtopics_list = map(int, gtopics_list)
+  gtopics_key = str(sorted(gtopics_list))
 
   ## for topics to go deeper (topics already liked)
   deeper_rtopics = ['topic{:02d}'.format(x) for x in gtopics_list]
-  deeper_candidates = TP_info.ix[deeper_rtopics, 'tids'].tolist()
+  deeper_candidates = np.array(TP_info.ix[deeper_rtopics, 'tids'].tolist())
+  if input_tids is not None:
+    deeper_candidates = [ [x for x in tmp_tids if x not in input_tids] \
+      for tmp_tids in deeper_candidates]
   deeper_rtalks = get_rtalks_from_ratings(user_fratings, deeper_candidates)
 
   ## for topics to go wider (topics new to the user)
   wider_rtopics = G_rtopics[gtopics_key]
   wider_candidates = TP_info.ix[wider_rtopics, 'tids'].tolist()
+  if input_tids is not None:
+    wider_candidates = [ [x for x in tmp_tids if x not in input_tids] \
+      for tmp_tids in wider_candidates]
   wider_rtalks = get_rtalks_from_ratings(user_fratings, wider_candidates)
 
   return deeper_rtalks + wider_rtalks, deeper_rtopics + wider_rtopics
@@ -148,7 +166,6 @@ def get_closest_rtalk(talk_ratings, fav_ratings, OPTION=['MEAN_DIST', 'MIN_DIST'
 def get_existing_user_tscores_fratings(uid):
   user_tscores = U_tscores.ix[uid,:]
 
-  ## NEED_CHECKING: should move to model_user_groups.py?
   top_topics = user_tscores.argsort()[::-1][:N_GROUP_TOPICS] 
   for idx in xrange(N_GROUP_TOPICS):
     user_tscores['top_topic{}'.format(idx+1)] = top_topics[idx]
@@ -158,6 +175,27 @@ def get_existing_user_tscores_fratings(uid):
 
   return user_tscores, user_fratings
 
+def print_topic_keywords(mdl_name, n_kws=10):
+  if mdl_name == 'LDA':
+    mdl = mdl_LDA
+    topic_kws = mdl.print_topics(num_words=n_kws)
+    for (idx, kws) in topic_kws:
+      kws = kws.split(' + ')
+      kws = [re.findall(r'\w+', kw)[2] for kw in kws]
+      kws = ', '.join(kws)
+      print 'topic{:02d}: {}'.format(idx, kws)
+  elif mdl_name[1:] == 'MF':
+    if mdl_name == 'NMF':
+      vocabs = tfidf_vec_NMF.get_feature_names()
+      tfidf_mat = TP_tfidf_NMF
+    elif mdl_name == 'GMF':
+      vocabs = tfidf_vec_GMF.get_feature_names()
+      tfidf_mat = TP_tfidf_GMF
+
+    for (idx, tfidf_list) in enumerate(tfidf_mat):
+      top_idx = sorted( np.argsort( tfidf_list.toarray() )[0][::-1][:n_kws] )
+      top_vocabs = np.array(vocabs)[top_idx]
+      print 'topic{:02d}: {}'.format(idx, ', '.join(top_vocabs))
 
 def rec_talks(uid, mdl_name):
   if uid.lower() =='n':
@@ -169,6 +207,8 @@ def rec_talks(uid, mdl_name):
 
   rec_tids, rec_topics = get_user_rec_talks(tscores, fratings)
   print_rtalks(rec_tids)
+  print 'rec_topics = {}'.format(rec_topics)
+  print_topic_keywords(mdl_name=mdl_name)
 
 
 def print_rtalks(rec_tids):
@@ -178,21 +218,22 @@ def print_rtalks(rec_tids):
     tt = TK_info.ix[rtid]
 
     tthemes = tt.related_themes
-    msg = '\n====={}: {} ({})=====\n{}\n[keywords]\n{}'.format(\
+
+    t_rating = TK_ratings.ix[rtid]
+    t_rating = t_rating[np.argsort(t_rating)[::-1][:3]]
+    t_rating = ', '.join( t_rating.reset_index().apply(
+      lambda x: '{}:{:.0f}%'.format(x[0], np.round(x[1]*1e2,0)), axis=1) )
+
+    msg = '\n====={}: {} ({})=====\n{}\n[keywords] {}\n[ratings] {}'.format(\
         tt.speaker, tt.title, tt.ted_event, #rtid,
         textwrap.fill(tt.description, LINE_LENGTH), \
-        textwrap.fill(tt.keywords.replace('[','').replace(']',''), LINE_LENGTH))
+        textwrap.fill(tt.keywords.replace('[','').replace(']',''), LINE_LENGTH),
+        t_rating)
     if not isinstance(tthemes, float):
-      msg = '{}\n[themes]\n{}'.format(msg, 
+      msg = '{}\n[themes] {}'.format(msg, 
         re.sub('\[|\]|u\'|\'|\"|u\"', '', tthemes))
 
     print msg
-
-def evaluate_tids():
-  #nftalks_per_user = U_ftalks[['uid_idiap', 'tid']].groupby('uid_idiap').count()
-  #uids = nftalks_per_user.ix[nftalks_per_user['tid']>3]
-  #uids = np.random.choice(uids.index, size=100)
-  return uids
 
 def get_success_metrics(test_udf, mdl_name):
   print mdl_name
@@ -214,9 +255,9 @@ def get_success_metrics(test_udf, mdl_name):
   deeper_scores, wider_scores, deeper_bmk, wider_bmk = [], [], [], []
 
   for uid in test_udf['uid_idiap'].unique().tolist():
-    tids = test_udf.ix[test_udf['uid_idiap']==uid, 'tid'] 
+    tids = map(str, test_udf.ix[test_udf['uid_idiap']==uid, 'tid'] )
     tids_input = np.random.choice(tids, 2, replace=False)
-    tids_truth = tids[~tids.isin(tids_input)]
+    tids_truth = [x for x in tids if x not in tids_input]
     #print 'uid={}, tids_input={}'.format(uid, tids_input)
 
     user_text = TK_info.ix[tids_input].apply(get_talk_doc, axis=1).tolist()
@@ -226,7 +267,8 @@ def get_success_metrics(test_udf, mdl_name):
 
     user_fratings = TK_ratings.ix[tids_input]
 
-    rec_tids, topics_rec = get_user_rec_talks(user_tscores, user_fratings)
+    rec_tids, topics_rec = get_user_rec_talks(user_tscores, user_fratings,
+      input_tids = tids_input)
     topics_input = TK_topics.ix[map(str, tids_input), 'top_topic1']
     topics_truth = TK_topics.ix[map(str, tids_truth), 'top_topic1']
 
@@ -241,10 +283,10 @@ def get_success_metrics(test_udf, mdl_name):
 
 def evaluate_recommender():
   ## get testing uids
-  #uids = evaluate_tids()
   test_udf = pd.read_csv(TEST_USER_TALK_FN)
   test_udf['tid'] = test_udf['tid'].astype(int)
   
+  #for mdl in [MODEL_NAMES[0]]:
   for mdl in MODEL_NAMES:
     deeper_scores, wider_scores, deeper_bmk, wider_bmk = get_success_metrics(test_udf, mdl_name=mdl)
     rec_scores = deeper_scores + wider_scores
@@ -259,6 +301,9 @@ def evaluate_recommender():
     print 'outputform: score {:.4f}, freq {:4f}, pvalue {:4f}'.format(\
       np.mean(outperform_scores), np.mean(outperform_scores>0),
       ttest_1samp(outperform_scores, 0).pvalue)
+
+    print_topic_keywords(mdl_name=mdl)
+
   
 if __name__ == '__main__':
   if len(sys.argv) > 1:
@@ -269,7 +314,7 @@ if __name__ == '__main__':
   if MODE == 'RECOMMEND':
     msg = '\nPlease enter your UserID, or "n" (for a new user), or "q" (for quit): '
 
-    MODEL = MODEL_NAMES[1]
+    MODEL = BEST_MODEL
     print 'Evaluation is based on model {}'.format(MODEL)
 
     if MODEL == 'LDA':
@@ -288,6 +333,17 @@ if __name__ == '__main__':
       uid = raw_input(msg)
   else:
     evaluate_recommender()
+
+
+if False:
+  U_tscores = U_tscores_LDA
+  kk = KMeans(n_clusters=55, random_state=0).fit(U_tscores_LDA.values)
+  user_grp = kk.predict(user_tscores[:N_TOTAL_TOPICS])
+  grps = U_tscores.ix[kk.labels_==user_grp,:].index
+  others = U_tscores.ix[kk.labels_!=user_grp,:].index
+
+  np.sum((U_tscores.ix[grps,:]-user_tscores[:N_TOTAL_TOPICS])**2, axis=1).describe()
+  np.sum((U_tscores.ix[others,:]-user_tscores[:N_TOTAL_TOPICS])**2, axis=1).describe()
 
 
 

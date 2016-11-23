@@ -1,3 +1,20 @@
+--- run src/UserUserRec.py (1 talk per deeper/wider topics, total 4 talks)
+2016/11/23 12:24:41: Evaluating...
+2016/11/23 12:25:47: Evaluation Result...
+rec dists = 1.4992, bmk dists = 1.5121
+diff (rec-bmk) = -0.0129, pvalue = 0.0000
+
+--- run src/UserUserRec.py (2 talks per deeper, 1 talk per wider, total 6 talks)
+
+--- run src/TalkTalkRec.py
+2016/11/23 12:27:01: Evaluating...
+2016/11/23 12:27:30: Evaluation Result...
+rec dists = 1.3094, bmk dists = 1.5121
+diff (rec-bmk) = -0.2027, pvalue = 0.0000
+
+
+
+
 --- python src/model_talk_topics.py GMF
 Optimization Complete: Convergence on objective within bounds.
 Computing final objective value and training RMSE.

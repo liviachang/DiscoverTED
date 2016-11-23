@@ -9,8 +9,17 @@ class Talk(object):
     self.ratings = talks_df.ix[:,RATING_TYPES]
     self.info = talks_df.ix[:,INFO_COLS]
 
+  def get_text(self, tids):
+    text_cols = ['keywords', 'description']
+    text = self.info.ix[tids, text_cols].apply(lambda x: ' '.join(x), axis=1)
+    if len(tids)==1:
+      text = text[0]
+    else:
+      text = reduce(lambda x, y: x+' '+y, text)
+    return text
+
   def print_talk(self, tid):
-    LINE_LENGTH = 100
+    LINE_LENGTH = 90
 
     info = self.info.ix[tid]
     themes = info.related_themes

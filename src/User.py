@@ -1,12 +1,45 @@
 from src.utils import *
 
-class NewUser(object):
-  def __init__(self):
+class User(object):
+  def __init__(self, uid='New'):
+    self.uid = uid
+    self.text = None
+    self.ratings = None
+
+  def __str__(self):
+    output = 'User: {}\n'.format(self.uid)
+    output = output + textwrap.fill('Text: {}'.format(self.text), 100)
+    output = output + '\nRating:\n{}\n'.format(self.ratings)
+    return output
+
+class TestUsers(object):
+  def __init__(self, talks):
+    np.random.seed(0)
+    test_udf = pd.read_csv(TEST_USER_TALK_FN)
+    test_udf['tid'] = test_udf['tid'].astype(int)
+    test_uids = test_udf['uid_idiap'].unique().tolist()
+
+    users = []
+    for uid in test_uids:
+      cur_user = User(uid)
+
+      tids = map(str, test_udf.ix[test_udf['uid_idiap']==uid, 'tid'] )
+      cur_user.input_tids = np.random.choice(tids, 2, replace=False)
+      cur_user.true_tids = [x for x in tids if x not in cur_user.input_tids]
+
+      cur_user.text = talks.get_text(cur_user.input_tids)
+      cur_user.ratings = talks.ratings.ix[cur_user.input_tids]
+      users.append(cur_user)
+    self.users = users
+
+class NewUser(User):
+  def __init__(self, uid='New'):
     self.text = self._get_user_text()
     self.ratings = self._get_user_ratings()
+    self.uid = uid
 
   def _get_user_text(self):
-    default_text = 'computer internet technology data stock market finance economics'
+    default_text = 'machine learning big data artificial intelligence invest get rich finance economics'
     user_text = raw_input('\nTopics you are interested in: (say, \'data science, finance\'):  ')
     user_text = default_text if user_text=='' else user_text
     print user_text
@@ -62,4 +95,8 @@ class NewUser(object):
 
 
 if __name__ == '__main__':
-  x = NewUser()
+  #x = NewUser()
+
+  from src.Talk import Talk
+  talks = Talk()
+  test_users = TestUsers(talks)

@@ -8,12 +8,16 @@ from nltk.stem.porter import PorterStemmer
 from nltk.stem.snowball import SnowballStemmer
 from nltk.tokenize import RegexpTokenizer
 from scipy.stats import rankdata
+from scipy.stats import ttest_1samp
 from sklearn.decomposition import NMF
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import linear_kernel
+from sklearn.neighbors import NearestNeighbors
 from stop_words import get_stop_words
 from time import time
 import cPickle as pickle
+import dill
+import graphlab as gl
 import numpy as np
 import os
 import pandas as pd
@@ -21,8 +25,6 @@ import random
 import re
 import sys
 import textwrap
-from scipy.stats import ttest_1samp
-import graphlab as gl
 
 TALK_DATA_FN = '/Users/liviachang/Galvanize/capstone/data/talks_info_merged.csv'
 USER_TALK_FN = '/Users/liviachang/Galvanize/capstone/data/train_users_info_transformed.csv'
@@ -37,6 +39,7 @@ USER_DATA_IDIAP_FN = '/Users/liviachang/TED/idiap/ted_users-10-Sep-2012.json'
 LDA_MODEL_FN = '/Users/liviachang/Galvanize/capstone/model/model_lda.pkl'
 LDA_TOPICS_FN = '/Users/liviachang/Galvanize/capstone/model/data_lda_topics.pkl'
 LDA_GROUP_DATA_FN = '/Users/liviachang/Galvanize/capstone/model/data_lda_user_groups.pkl'
+TOPIC_MODEL_LDA_FN = '/Users/liviachang/Galvanize/capstone/model/topic_model_lda.pkl'
 
 NMF_MODEL_FN = '/Users/liviachang/Galvanize/capstone/model/model_nmf.pkl'
 NMF_TOPICS_FN = '/Users/liviachang/Galvanize/capstone/model/data_nmf_topics.pkl'
@@ -49,6 +52,7 @@ GMF_GROUP_DATA_FN = '/Users/liviachang/Galvanize/capstone/model/data_gmf_user_gr
 RATING_TYPES = ['Beautiful', 'Confusing', 'Courageous', 'Fascinating', \
   'Funny','Informative', 'Ingenious', 'Inspiring', 'Jaw-dropping', \
   'Longwinded', 'OK', 'Obnoxious', 'Persuasive', 'Unconvincing']
+INFO_COLS = ['speaker', 'title', 'ted_event', 'description', 'keywords', 'related_themes']
 
 N_TOTAL_TOPICS = 10
 N_GROUP_TOPICS = 2 ## N_DEEPER_TOPICS

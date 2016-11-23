@@ -176,7 +176,7 @@ def get_topic_talks(TK_topics, TK_info):
     stop_wds=get_stop_words('en'), stemmer=PorterStemmer())
   topic_desc = topic_desc.apply(tmpf)
   topic_desc = topic_desc.apply(lambda x: ' '.join(x))
-  
+
   topic_df = pd.DataFrame({'tids':topic_tids, 'desc':topic_desc})
   topic_df.index = ['topic{:02d}'.format(x) for x in range(N_TOTAL_TOPICS)]
   return topic_df

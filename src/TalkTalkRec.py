@@ -8,9 +8,9 @@ class TalkTalkRec(Recommender):
   def __init__(self, mdl, talk_ratings):
     super(TalkTalkRec, self).__init__(mdl, talk_ratings)
 
-  def recommend(self, user, n_talks=1):
+  def recommend(self, user, n_talks=2):
     user_data = self._format_user_input(user)
-    rtids = self._get_rtids_knn(user_data, tids=None, n_nbr=5, n_talks=4)
+    rtids = self._get_rtids_knn(user_data, tids=None, n_nbr=5, n_talks=n_talks)
     return rtids
   
 if __name__ == '__main__':
@@ -22,8 +22,7 @@ if __name__ == '__main__':
   ttrec = TalkTalkRec(mdlLDA, talks.ratings)
   
   uu = NewUser()
-  tids_ttrec = ttrec.recommend(uu)
-  map(talks.print_talk, tids_ttrec)
+  tids_ttrec = ttrec.recommend(uu); map(talks.print_talk, tids_ttrec);
 
   test_users = TestUsers(talks)
   dists_rec, dists_bmk = ttrec.evaluate(test_users)

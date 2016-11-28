@@ -27,25 +27,30 @@ class Recommender(object):
 
     print ''
     print_time('Evaluating...')
-    avg_dists = []
+    rec_dists = []
     bmk_dists = []
     for user in test_users.users:
       rtids = self.recommend(user)
-      dists = cdist(self.talks.ix[rtids,:], self.talks.ix[user.true_tids,:])
-      bdists = cdist(self.talks.drop(np.append(user.input_tids, user.true_tids)), \
-        self.talks.ix[user.true_tids,:])
-      avg_dists.append( dists.mean() )
+      rdists = cdist(self.talks.ix[rtids,:], self.talks.ix[user.true_tids,:])
+      rdists = np.apply_along_axis(min, 1, rdists)
+
+      btids = self.talks.index.drop(np.append(user.input_tids, user.true_tids))
+      btids = np.random.choice(btids, size=len(rtids))
+      bdists = cdist(self.talks.ix[btids,:], self.talks.ix[user.true_tids,:])
+      bdists = np.apply_along_axis(min, 1, bdists)
+
+      rec_dists.append( rdists.mean() )
       bmk_dists.append( bdists.mean() )
 
-    avg_dists = np.array(avg_dists)
+    rec_dists = np.array(rec_dists)
     bmk_dists = np.array(bmk_dists)
 
     print_time('Evaluation Result...')
-    print 'rec dists = {:.4f}, bmk dists = {:.4f}'.format(np.mean(avg_dists), np.mean(bmk_dists))
+    print 'rec dists = {:.4f}, bmk dists = {:.4f}'.format(np.mean(rec_dists), np.mean(bmk_dists))
     print 'diff (rec-bmk) = {:.4f}, pvalue = {:.4f}'.format(
-      np.mean(avg_dists-bmk_dists), ttest_1samp(avg_dists-bmk_dists,0).pvalue )
+      np.mean(rec_dists-bmk_dists), ttest_1samp(rec_dists-bmk_dists,0).pvalue )
 
-    return avg_dists, bmk_dists
+    return rec_dists, bmk_dists
   
   def _get_rtids_knn(self, user_data, tids, n_nbr, n_talks):
     if tids is None:

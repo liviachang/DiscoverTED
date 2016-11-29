@@ -89,8 +89,9 @@ Pipeline for the user-user recommender.
 Evaluation can be challenging for the recommendation system. 
 The below two questions may be helpful to evaluate DiscoverTED.
 
-#### Compared to the *random recommendations*, are recommended talks from DiscoverTED closer to users' favorite talks? **<span style="color:red">Yes!!</span>** 
+#### Compared to the *random recommendations*, are recommended talks from DiscoverTED closer to users' favorite talks? 
 
+**<span style="color:red">Yes!!</span>** 
 I measured Euclidean distance from each of the recommended
 talk to its closest favorite talk, based on numeric features of talks (i.e. scores
 for each topic and talk types). 
@@ -106,8 +107,9 @@ the distance of DiscoverTED ensamble recommender is slightly larger than the
 talk-talk recommender because the ensamble recommender include
 recommendations for the new and wider topics which may not be liked by users.
 
-#### Compared to the *"deeper" topics only*, do "wider" topics improve coverage in users' favorite talks? **<span style="color:red">Yes!!</span>**
+#### Compared to the *"deeper" topics only*, do "wider" topics improve coverage in users' favorite talks?
 
+**<span style="color:red">Yes!!</span>** 
 I measured Euclidean distance from each of the favorite talk to its
 recommended talk, based on numeric features of talks (i.e. scores
 for each topic and talk types). 

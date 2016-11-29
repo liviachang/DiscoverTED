@@ -1,4 +1,4 @@
-# HappyLearning: A TED Talk Recommender to Learn Deeper and Wider
+# DiscoverTED: A TED Talk Recommender to Learn Deeper and Wider
 
 This is a 2-week capstone project for my Galvanize Data Science Immersive program. 
 The goal is to build a TED talk recommender for people to learn deeper and

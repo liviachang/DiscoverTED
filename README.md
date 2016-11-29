@@ -39,7 +39,7 @@ Users have to enter some keywords to describe their interested topics (say,
 DiscoverTED will recommend two talks to learn deeper and two talks to learn
 wider.
 
-#### Talk-Talk Recommender for Deeper Topics
+### Talk-Talk Recommender for Deeper Topics
 For the talk-talk recommender, the talks are modeled into `k` topics based on
 their description and tags. The recommended talks are the most similar talks
 based on users' inputs.
@@ -55,7 +55,7 @@ Pipeline for the talk-talk recommender.
 ![Pipeline for Talk-Talk Reommender](img/talk_talk_rec.png)
 
 
-#### User-User Recommender for Wider Topics
+### User-User Recommender for Wider Topics
 For the user-user recommender, users are modeled into groups based on their
 interested keywords and preferred talk types, and representative talks are 
 picked for each topic based on the topic modeling results. 

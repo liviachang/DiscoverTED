@@ -1,10 +1,10 @@
-# DiscoverTED: A TED Talk Recommender to Learn Deeper and Wider
+# <span style="color:red">DiscoverTED</span></br>A TED Talk Recommender to Learn Deeper and Wider
 
 This is a 2-week capstone project for my Galvanize Data Science Immersive program. 
 The goal is to build a TED talk recommender for people to learn deeper and
 wider topics. The project is still working in progress.
 
-While I am trying to be an expert in data science, I would also like to keep an
+While I am deeper for data science, I would also like to keep an
 eye on the world. Learning some new topics stimulate my thoughts and adds
 diversity to my life! [TED.com](https://www.ted.com/) is one of my favorite resources 
 to learn. Thus, I would like to build the TED recommender that helps me explore new 
@@ -16,14 +16,14 @@ Here is a sample result from DiscoverTED.
 ## Data
 There are two datasets used in DiscoverTED: **talk data** and **user-talk data**
 
-### Talk Data
+#### Talk Data
 Talk data are scraped from [TED.com](https://www.ted.com/). Fields include
 titles, tags, description, talk types, related themes,...etc. Data was scraped
 as of Oct 2016.
 - Total 2,318 talks
 - On average, there are 84.3 users per favorited talk
 
-### User-Talk Data
+#### User-Talk Data
 User-talk data are sourced from [Idiap TED dataset](https://www.idiap.ch/dataset/ted). 
 Fields include user IDs, favorite talks. Data was extracted as of Sep 2012.
 - Total users: 12,401
@@ -39,7 +39,7 @@ Users have to enter some keywords to describe their interested topics (say,
 DiscoverTED will recommend two talks to learn deeper and two talks to learn
 wider.
 
-### Talk-Talk Recommender for Deeper Topics
+#### Talk-Talk Recommender for Deeper Topics
 For the talk-talk recommender, the talks are modeled into `k` topics based on
 their description and tags. The recommended talks are the most similar talks
 based on users' inputs.
@@ -55,7 +55,7 @@ Pipeline for the talk-talk recommender.
 ![Pipeline for Talk-Talk Reommender](img/talk_talk_rec.png)
 
 
-### User-User Recommender for Wider Topics
+#### User-User Recommender for Wider Topics
 For the user-user recommender, users are modeled into groups based on their
 interested keywords and preferred talk types, and representative talks are 
 picked for each topic based on the topic modeling results. 
@@ -77,38 +77,37 @@ Pipeline for the user-user recommender.
 
 ## Evaluation
 Evaluation can be challenging for the recommendation system. 
-One way to evaluate DiscoverTED is to ask: 
-1. Compared to the *random recommendations*, are recommended talks from DiscoverTED
-  closer to users' favorite talks? **Yes!!**
+The below two questions may be helpful to evaluate DiscoverTED.
 
-  I measured Euclidean distance from each of the recommended
-  talk to its closest favorite talk, based on numeric features of talks (i.e. scores
-  for each topic and talk types). 
-    - The smaller the distance, the closer the recommended talk to the favorite
-      talks
-    - The average distance of the random recommender: 1.01
-    - The average distance of DiscoverTED talk-talk recommender: 0.84
-    - The average distance of DiscoverTED ensamble recommender: 0.89
+#### Compared to the *random recommendations*, are recommended talks from DiscoverTED closer to users' favorite talks? **<span style="color:red">Yes!!</span>** 
 
-  Both DiscoverTED talk-talk only recommender and DiscoverTED ensamble
-  recommender have smaller distances than the random recommender. As expected,
-  the distance of DiscoverTED ensamble recommender is slightly larger than the
-  talk-talk recommender because the ensamble recommender include
-  recommendations for the new and wider topics which may not be liked by users.
+I measured Euclidean distance from each of the recommended
+talk to its closest favorite talk, based on numeric features of talks (i.e. scores
+for each topic and talk types). 
+- The smaller the distance, the closer the recommended talk to the favorite
+  talks
+- The average distance of the random recommender: 1.01
+- The average distance of DiscoverTED talk-talk recommender: 0.84
+- The average distance of DiscoverTED ensamble recommender: 0.89
 
-2. Compared to the *"deeper" topics only*, do "wider" topics improve coverage in
-  users' favorite talks? **Yes!!**
+Both DiscoverTED talk-talk only recommender and DiscoverTED ensamble
+recommender have smaller distances than the random recommender. As expected,
+the distance of DiscoverTED ensamble recommender is slightly larger than the
+talk-talk recommender because the ensamble recommender include
+recommendations for the new and wider topics which may not be liked by users.
 
-  I measured Euclidean distance from each of the favorite talk to its
-  recommended talk, based on numeric features of talks (i.e. scores
-  for each topic and talk types). 
-    - The smaller the distance, the closer the favorite talk to its closest recommended talk
-    - The average distance of DiscoverTED talk-talk only recommender: 1.17
-    - The average distance of DiscoverTED ensamble recommender: 1.11
+#### Compared to the *"deeper" topics only*, do "wider" topics improve coverage in users' favorite talks? **<span style="color:red">Yes!!</span>**
 
-  DiscoverTED ensamble recommender has smaller distance than DiscoverTED
-  talk-talk only recommender, implying adding "wider-topic" recommendations
-  help capture users' favorite talks.
+I measured Euclidean distance from each of the favorite talk to its
+recommended talk, based on numeric features of talks (i.e. scores
+for each topic and talk types). 
+- The smaller the distance, the closer the favorite talk to its closest recommended talk
+- The average distance of DiscoverTED talk-talk only recommender: 1.17
+- The average distance of DiscoverTED ensamble recommender: 1.11
+
+DiscoverTED ensamble recommender has smaller distance than DiscoverTED
+talk-talk only recommender, implying adding "wider-topic" recommendations
+help capture users' favorite talks.
 
 
 ## Acknowledge

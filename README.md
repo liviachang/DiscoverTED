@@ -31,8 +31,6 @@ evaluate my recommender is to ask: is my recommender bringing the topics a user
 is interested?
 
 
-    (1,500 users for testing, 10,901 users for training)
-
 
 ## Data
 The data is mainly sourced from [Idiap TED dataset](https://www.idiap.ch/dataset/ted) 

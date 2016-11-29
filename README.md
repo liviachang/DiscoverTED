@@ -10,7 +10,17 @@ diversity to my life! [TED.com](https://www.ted.com/) is one of my favorite reso
 to learn. Thus, I would like to build the TED recommender that helps me explore new 
 topics that I will potentially like.
 
-Here is a sample result from DiscoverTED.
+Potential challenges include
+- Sparse data: users' data is very sparse for some commonly used techniques in the
+  recommendation system (say, matrix factorization and collaborative
+  filtering).
+- Cold start: no information can be used to start for new users
+- Evaluation
+
+I overcame the above challenges by using Natural Language Processing and 
+Latent Dirichlet Allocation for topic modeling, and by asking users to input
+some keywords for interested topics and talk types. More evaluation ideas are
+describeb below. Here is a sample result from DiscoverTED.
 ![Informative DS Talk](img/sample_result_ds.png)
 
 ## Data

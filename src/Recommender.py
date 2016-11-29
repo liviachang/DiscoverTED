@@ -21,18 +21,24 @@ class Recommender(object):
     user_data = pd.concat([user.ratings.reset_index(drop=True), tscores_df], axis=1)
     return user_data
 
-  def evaluate(self, test_users):
+  def evaluate(self, test_users, n_talks=None):
     import warnings
     warnings.filterwarnings("ignore")
 
     print ''
-    print_time('Evaluating...')
+    print_time('Evaluating {}'.format(type(self).__name__))
     rec_dists = []
     bmk_dists = []
+    ## the goal is to find whether the fav. talk can be better captured if including  wider topics
+    fav_dists = []
+
     for user in test_users.users:
-      rtids = self.recommend(user)
-      rdists = cdist(self.talks.ix[rtids,:], self.talks.ix[user.true_tids,:])
-      rdists = np.apply_along_axis(min, 1, rdists)
+      if n_talks is None:
+        rtids = self.recommend(user)
+      else:
+        rtids = self.recommend(user, n_talks=n_talks)
+      pdists = cdist(self.talks.ix[rtids,:], self.talks.ix[user.true_tids,:])
+      rdists = np.apply_along_axis(min, 1, pdists)
 
       btids = self.talks.index.drop(np.append(user.input_tids, user.true_tids))
       btids = np.random.choice(btids, size=len(rtids))
@@ -41,16 +47,20 @@ class Recommender(object):
 
       rec_dists.append( rdists.mean() )
       bmk_dists.append( bdists.mean() )
+      
+      fdists = np.apply_along_axis(min, 0, pdists)
+      fav_dists.append( fdists.mean() )
 
     rec_dists = np.array(rec_dists)
     bmk_dists = np.array(bmk_dists)
+    fav_dists = np.array(fav_dists)
 
     print_time('Evaluation Result...')
     print 'rec dists = {:.4f}, bmk dists = {:.4f}'.format(np.mean(rec_dists), np.mean(bmk_dists))
     print 'diff (rec-bmk) = {:.4f}, pvalue = {:.4f}'.format(
       np.mean(rec_dists-bmk_dists), ttest_1samp(rec_dists-bmk_dists,0).pvalue )
 
-    return rec_dists, bmk_dists
+    return rec_dists, bmk_dists, fav_dists
   
   def _get_rtids_knn(self, user_data, tids, n_nbr, n_talks):
     if tids is None:

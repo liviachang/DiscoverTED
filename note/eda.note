@@ -1,3 +1,147 @@
+== 2 talks from talk-talk recommender
+2016/11/28 14:21:05: Evaluating...
+2016/11/28 14:21:34: Evaluation Result...
+rec dists = 1.3073, bmk dists = 1.5121
+diff (rec-bmk) = -0.2048, pvalue = 0.0000
+
+== 4 talks from talk-talk recommender
+2016/11/28 14:22:54: Evaluating...
+2016/11/28 14:23:22: Evaluation Result...
+rec dists = 1.3094, bmk dists = 1.5121
+diff (rec-bmk) = -0.2027, pvalue = 0.0000
+
+== 2 talks from user-user recommender
+2016/11/28 14:39:29: Evaluating...
+2016/11/28 14:40:17: Evaluation Result...
+rec dists = 0.9387, bmk dists = 1.0056
+diff (rec-bmk) = -0.0669, pvalue = 0.0000
+
+
+
+============================
+============================
+============================
+============================
+============================
+============================
+
+In [7]: run src/TalkTalkRec.py
+
+Topics you are interested in: (say, 'data science, finance'):  machine learning big data
+machine learning big data
+
+ 0: Beautiful    |  1: Confusing    |  2: Courageous   |  3: Fascinating  | 
+ 4: Funny        |  5: Informative  |  6: Ingenious    |  7: Inspiring    | 
+ 8: Jaw-dropping |  9: Longwinded   | 10: OK           | 11: Obnoxious    | 
+12: Persuasive   | 13: Unconvincing | 
+
+Types you are interested in: (say, '5,7' for 'Informative+Inspiring'):  5
+Informative
+/Users/liviachang/anaconda/lib/python2.7/site-packages/sklearn/utils/validation.py:395: DeprecationWarnin.
+  DeprecationWarning)
+
+=====Anthony Goldbloom: The jobs we'll lose to machines -- and the ones we won't (TED2016)=====
+Machine learning isn't just for simple tasks like assessing credit risk and sorting mail
+anymore -- today, it's capable of far more complex applications, like grading essays and
+diagnosing diseases. With these advances comes an uneasy question: Will a robot do your
+job in the future?
+[keywords] AI, collaboration, data, future, innovation, intelligence, machine learning, productivity,
+programming, robots, technology, work
+[ratings] Informative:46%, Inspiring:13%, Persuasive:12%
+
+=====Todd Humphreys: How to fool a GPS (TEDxAustin)=====
+Todd Humphreys forecasts the near-future of geolocation when millimeter-accurate GPS
+"dots" will enable you to find pin-point locations, index-search your physical possessions
+... or to track people without their knowledge. And the response to the sinister side of
+this technology may have unintended consequences of its own.
+[keywords] TEDx, global issues, hack, security, technology
+[ratings] Informative:34%, Fascinating:27%, Jaw-dropping:10%
+
+---- UserUserRec
+=====John Maeda: My journey in design (Serious Play 2008)=====
+Designer John Maeda talks about his path from a Seattle tofu factory to the Rhode Island
+School of Design, where he became president in 2008. Maeda, a tireless experimenter and a
+witty observer, explores the crucial moment when design met computers.
+[keywords] code, computers, curiosity, design, education, personal growth, programming, technology
+[ratings] Longwinded:18%, OK:17%, Inspiring:13%
+[themes] Art Unusual, The Creative Spark
+
+=====David McCandless: The beauty of data visualization (TEDGlobal 2010)=====
+David McCandless turns complex data sets (like worldwide military spending, media buzz,
+Facebook status updates) into beautiful, simple diagrams that tease out unseen patterns
+and connections. Good design, he suggests, is the best way to navigate information glut --
+and it may just change the way we see the world.
+[keywords] complexity, computers, data, design, visualizations
+[ratings] Fascinating:21%, Informative:20%, Inspiring:14%
+[themes] Design That Matters, The Creative Spark, Presentation Innovation
+
+
+================================================
+================================================
+================================================
+In [1]: run src/TalkTalkRec.py
+/Users/liviachang/anaconda/lib/python2.7/site-packages/gensim/utils.py:1015: UserWarning: Pattern library.
+  warnings.warn("Pattern library is not installed, lemmatization won't be available.")
+
+Topics you are interested in: (say, 'data science, finance'):  piano songs music
+piano songs music
+
+ 0: Beautiful    |  1: Confusing    |  2: Courageous   |  3: Fascinating  |
+ 4: Funny        |  5: Informative  |  6: Ingenious    |  7: Inspiring    |
+ 8: Jaw-dropping |  9: Longwinded   | 10: OK           | 11: Obnoxious    |
+12: Persuasive   | 13: Unconvincing |
+
+Types you are interested in: (say, '5,7' for 'Informative+Inspiring'):  0
+Beautiful
+/Users/liviachang/anaconda/lib/python2.7/site-packages/sklearn/utils/validation.py:395: DeprecationWarnin.
+  DeprecationWarning)
+
+=====Teitur: Home is a song I've always remembered (TED2015)=====
+For musician Teitur, singing is about giving away a piece of yourself to others. "If your
+intentions are to impress people or to get the big applause at the end," he says, "then
+you are taking, not giving." Listen as he plays on stage at TED2015, offering two songs
+about love, distance and home.
+[keywords] guitar, live music, music, performance, piano
+[ratings] Beautiful:53%, Inspiring:18%, Fascinating:10%
+
+=====Natalie MacMaster: Cape Breton fiddling in reel time (TED2002)=====
+Violinist Natalie MacMaster and TED Musical Director Thomas Dolby play Dolby's original
+song "Blue Is a River" in this ethereal duet -- with a little dancing.
+[keywords] entertainment, history, live music, music, performance, violin
+[ratings] Beautiful:45%, Inspiring:12%, OK:10%
+[themes] Spectacular Performance, Live Music, The Creative Spark
+
+
+=====Raghava KK: Shake up your story (TEDGlobal 2011)=====
+Artist Raghava KK demos his new children's book for iPad with a fun feature: when you
+shake it, the story -- and your perspective -- changes. In this charming short talk, he
+invites all of us to shake up our perspective a little bit.
+[keywords] books, creativity, design, entertainment, storytelling, technology
+[ratings] Inspiring:26%, Funny:15%, Ingenious:13%
+[themes] Master Storytellers, Art Unusual
+
+=====Bahia Shehab: A thousand times no (TEDGlobal 2012)=====
+Art historian Bahia Shehab has long been fascinated with the Arabic script for 'no.' When
+revolution swept through Egypt in 2011, she began spraying the image in the streets saying
+no to dictators, no to military rule and no to violence.
+[keywords] Egypt, Middle East, TED Fellows, art, protests, world cultures
+[ratings] Courageous:31%, Inspiring:31%, Beautiful:21%
+
+
+
+
+
+
+
+
+
+
+================================================
+================================================
+================================================
+================================================
+================================================
+================================================
 --- run src/UserUserRec.py (1 talk per deeper/wider topics, total 4 talks)
 2016/11/23 12:24:41: Evaluating...
 2016/11/23 12:25:47: Evaluation Result...

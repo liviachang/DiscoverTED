@@ -14,23 +14,29 @@ Here is a sample result from DiscoverTED.
 ![Informative DS Talk](img/sample_result_ds.png)
 
 ## Data
-The data is mainly sourced from [Idiap TED dataset](https://www.idiap.ch/dataset/ted) 
-and [ted.com](https://ted.com). 
-- Idiap: Scraped as of Sep 2012. Includes data of both users and talks (except talk ratings).
-- Rating: Scraped as of Nov 2016 from ted.com
-- Exploratory Data Analysis (EDA):
-    - Total 12,401 users
-    - Total 6,449 active users (users with 4+ favorite talks). 52% of total users
-    - Total 2,318 talks (1,201 talks are favorited)
-    - Average # favorate talks per user = 9.3
-    - Average # users per talk favorited = 84.3
+There are two datasets used in DiscoverTED: **talk data** and **user-talk data**
+
+### Talk Data
+Talk data are scraped from [TED.com](https://www.ted.com/). Fields include
+titles, tags, description, talk types, related themes,...etc. Data was scraped
+as of Oct 2016.
+- Total 2,318 talks
+- On average, there are 84.3 users per favorited talk
+
+### User-Talk Data
+User-talk data are sourced from [Idiap TED dataset](https://www.idiap.ch/dataset/ted). 
+Fields include user IDs, favorite talks. Data was extracted as of Sep 2012.
+- Total users: 12,401
+- Active users w/ 4+ favorite talks: 6,449 (52% of total users)
+- Favorited talks: 1,201
+- On average, there are 9.3 favorite talks per user
 
 ## Methodology
 DiscoverTED is an ensamble recommender based on both **talk-talk recommender** for
 talks to learn deeper and **user-user recommender** for talks to learn wider.
 Users have to enter some keywords to describe their interested topics (say,
 "machine learning big data") and target talk types (say, "Informative" talks).
-Then, DiscoverTED will recommend two talks to learn deeper and two talks to learn
+DiscoverTED will recommend two talks to learn deeper and two talks to learn
 wider.
 
 ### Talk-Talk Recommender for Deeper Topics
@@ -70,15 +76,44 @@ Pipeline for the user-user recommender.
 ![Pipeline for User-User Reommender](img/user_user_rec.png)
 
 ## Evaluation
-Evaluation can be challenging for the recommendation system. One way to
-evaluate my recommender is to ask: is my recommender bringing the topics a user
-is interested?
+Evaluation can be challenging for the recommendation system. 
+One way to evaluate DiscoverTED is to ask: 
+1. Compared to the *random recommendations*, are recommended talks from DiscoverTED
+  closer to users' favorite talks? **Yes!!**
 
+  I measured Euclidean distance from each of the recommended
+  talk to its closest favorite talk, based on numeric features of talks (i.e. scores
+  for each topic and talk types). 
+    - The smaller the distance, the closer the recommended talk to the favorite
+      talks
+    - The average distance of the random recommender: 1.01
+    - The average distance of DiscoverTED talk-talk recommender: 0.84
+    - The average distance of DiscoverTED ensamble recommender: 0.89
+
+  Both DiscoverTED talk-talk only recommender and DiscoverTED ensamble
+  recommender have smaller distances than the random recommender. As expected,
+  the distance of DiscoverTED ensamble recommender is slightly larger than the
+  talk-talk recommender because the ensamble recommender include
+  recommendations for the new and wider topics which may not be liked by users.
+
+2. Compared to the *"deeper" topics only*, do "wider" topics improve coverage in
+  users' favorite talks? **Yes!!**
+
+  I measured Euclidean distance from each of the favorite talk to its
+  recommended talk, based on numeric features of talks (i.e. scores
+  for each topic and talk types). 
+    - The smaller the distance, the closer the favorite talk to its closest recommended talk
+    - The average distance of DiscoverTED talk-talk only recommender: 1.17
+    - The average distance of DiscoverTED ensamble recommender: 1.11
+
+  DiscoverTED ensamble recommender has smaller distance than DiscoverTED
+  talk-talk only recommender, implying adding "wider-topic" recommendations
+  help capture users' favorite talks.
 
 
 ## Acknowledge
-- Nikolaos Pappas, Andrei Popescu-Belis, "Combining Content with User
-  Preferences for TED Lecture Recommendation", 11th International Workshop on
-  Content Based Multimedia Indexing, Veszpré Hungary, IEEE, 2013 
-  [PDF](http://publications.idiap.ch/downloads/papers/2013/Pappas_CBMI_2013.pdf)
-  [Bibtex](http://publications.idiap.ch/index.php/export/publication/2564/bibtex)
+Nikolaos Pappas, Andrei Popescu-Belis, "Combining Content with User
+Preferences for TED Lecture Recommendation", 11th International Workshop on
+Content Based Multimedia Indexing, Veszpré Hungary, IEEE, 2013 
+[PDF](http://publications.idiap.ch/downloads/papers/2013/Pappas_CBMI_2013.pdf)
+[Bibtex](http://publications.idiap.ch/index.php/export/publication/2564/bibtex)

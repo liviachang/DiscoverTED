@@ -1,8 +1,0 @@
-python src/scrape_ted_talks.py
-python src/clean_data.py
-python src/model_talk_topics.py
-python src/model_user_groups.py
-python src/recommend_talks.py
-
-python src/evaluate.py
-

@@ -7,6 +7,7 @@ class User(object):
     self.ratings = None
 
   def __str__(self):
+    ''' print a user's interested keywords and preferred talk types'''
     output = 'User: {}\n'.format(self.uid)
     output = output + textwrap.fill('Text: {}'.format(self.text), 100)
     output = output + '\nRating:\n{}\n'.format(self.ratings)
@@ -20,13 +21,17 @@ class TestUsers(object):
     test_uids = test_udf['uid_idiap'].unique().tolist()
 
     users = []
+    ## create a User object for each testing user
     for uid in test_uids:
       cur_user = User(uid)
 
       tids = map(str, test_udf.ix[test_udf['uid_idiap']==uid, 'tid'] )
+      ## randomly select two "favorited" talks as the user input
       cur_user.input_tids = np.random.choice(tids, 2, replace=False)
+      ## user the rest of the "favorited" talks as the ground truth for evaluation
       cur_user.true_tids = [x for x in tids if x not in cur_user.input_tids]
 
+      ## format the user input (i.e. 2 of the favorited talks)
       cur_user.text = talks.get_text(cur_user.input_tids)
       cur_user.ratings = talks.ratings.ix[cur_user.input_tids]
       users.append(cur_user)
@@ -39,6 +44,7 @@ class NewUser(User):
     self.uid = uid
 
   def _get_user_text(self):
+    ''' get a new user's interested keywords '''
     default_text = 'machine learning big data artificial intelligence invest get rich finance economics'
     user_text = raw_input('\nTopics you are interested in: (say, \'data science, finance\'):  ')
     user_text = default_text if user_text=='' else user_text
@@ -46,6 +52,7 @@ class NewUser(User):
     return user_text
 
   def _get_user_ratings(self):
+    ''' get a new user's preferred talk types'''
     rating_dict = self._print_rating_menu()
 
     default_rating_idx = '5,7'
@@ -61,6 +68,8 @@ class NewUser(User):
       cur_combs = list(combinations(user_rating_idx, comb_len))
       rtyp_combs = rtyp_combs + cur_combs
 
+    ## create an indicator vector for each of the preferred types
+    ## as well as a vector of equally-weighted preferred types
     U_fratings = []
     for rcomb in rtyp_combs:
       U_fratings.append(self._get_fratings_per_rtypes(rcomb))
@@ -69,6 +78,7 @@ class NewUser(User):
     return U_fratings
 
   def _get_fratings_per_rtypes(self, rcomb):
+    ''' get numeric features for talk types'''
     U_frating = np.repeat(0., len(RATING_TYPES))
 
     if isinstance(rcomb, int):

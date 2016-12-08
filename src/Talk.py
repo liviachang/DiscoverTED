@@ -2,6 +2,7 @@ from src.utils import *
 
 class Talk(object):
   def __init__(self):
+    ## get talk attributes
     talks_df = pd.read_csv(TALK_DATA_FN)
     talks_df.tid = talks_df.tid.astype(str)
     talks_df = talks_df.set_index('tid')
@@ -10,6 +11,7 @@ class Talk(object):
     self.info = talks_df.ix[:,INFO_COLS]
 
   def get_text(self, tids):
+    ''' given talk ids, find the texts '''
     text_cols = ['keywords', 'description']
     text = self.info.ix[tids, text_cols].apply(lambda x: ' '.join(x), axis=1)
     if len(tids)==1:
@@ -19,6 +21,8 @@ class Talk(object):
     return text
 
   def print_talk(self, tid):
+    ''' print talk information '''
+
     LINE_LENGTH = 90
 
     info = self.info.ix[tid]

@@ -15,6 +15,7 @@ class Recommender(object):
     return tscores*2 # weight more for topic scores than rating types
 
   def _format_user_input(self, user):
+    ''' turn user interested keywords to numeric topic features '''
     tscores = self.mdl.transform(user.text)[:self.mdl.n_total_topics]
     tscores = self._adjust_tscores(tscores)
     tscores_df = pd.DataFrame([tscores] * user.ratings.shape[0])
@@ -22,6 +23,8 @@ class Recommender(object):
     return user_data
 
   def evaluate(self, test_users, n_talks=None):
+    ''' evaluate to get distances for each testing user '''
+    ''' need some cleanup to "dry" the code '''
     import warnings
     warnings.filterwarnings("ignore")
 
@@ -63,6 +66,7 @@ class Recommender(object):
     return rec_dists, bmk_dists, fav_dists
   
   def _get_rtids_knn(self, user_data, tids, n_nbr, n_talks):
+    ''' get the "closest" talk based on the talk features (topics + types) '''
     if tids is None:
       cur_talks = self.talks
     else:

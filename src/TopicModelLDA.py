@@ -44,11 +44,13 @@ class TopicModelLDA(object):
     return tscores
 
   def _get_rep_talks(self):
+    ''' get representative talks for each topic'''
     tscores = self.talk_tscores.ix[:, :self.n_total_topics]
     rep_tids = tscores.apply(self._get_rep_talks_per_topic, axis=0)
     return rep_tids
 
   def _get_rep_talks_per_topic(self, x, n_rep_talks=100):
+    ''' get representative talks for one topic'''
     talk_idx = x.values.argsort()[::-1][:n_rep_talks]
     talk_ids = x.index[talk_idx].tolist()
     return talk_ids

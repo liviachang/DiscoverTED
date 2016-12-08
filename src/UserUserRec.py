@@ -8,6 +8,7 @@ class UserUserRec(Recommender):
   def __init__(self, mdl, talk_ratings):
     super(UserUserRec, self).__init__(mdl, talk_ratings)
 
+    ## for each user, find nearest 20 users as the peers
     self.N_PEER_USERS = 20
 
     user_mat = pd.read_csv(RATING_MATRIX_FN)
@@ -19,6 +20,10 @@ class UserUserRec(Recommender):
     self.users = users.apply(lambda x: x/np.sum(x), axis=1)
 
   def recommend(self, user, n_topics=2, n_talks=1, include_deeper=False):
+    ''' based on the user's inputs, model user to groups and recommen talks
+    based on both deeper and wider topics '''
+
+    ## number of deeper topics
     N_COMMON_TOPICS = 2
     user_data = self._format_user_input(user)
     tscores = user_data.ix[0,len(RATING_TYPES):]
